@@ -263,13 +263,13 @@ async function showSupport() {
   printHeader('Tentang Aplikasi');
 	console.log(`${C.white}Terima kasih telah menggunakan MEDIA-DL!${C.reset}`);
   console.log(
-    `${C.white}Anda dapat mengunduh video/audio dengan kualitas terbaik.${C.reset}`
+    `${C.white} - Anda dapat mengunduh video/audio dengan kualitas terbaik.${C.reset}`
   );
   console.log(
-    `${C.white}Anda dapat mengunduh video dari Youtube(single/playlist), Tiktok, Reel, dan Short.${C.reset}`
+    `${C.white} - Anda dapat mengunduh video dari Youtube(single/playlist), Tiktok, Reel, dan Short.${C.reset}`
   );
   console.log(
-    `${C.white}Kami sudah menyertakan Safe Mode untuk kenyamanan Anda mengunduh video.${C.reset}\n`
+    `${C.white} - Kami sudah menyertakan Safe Mode untuk kenyamanan Anda mengunduh video.${C.reset}\n`
   );
 
   console.log(
