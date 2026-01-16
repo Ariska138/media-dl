@@ -1,4 +1,39 @@
-#!/usr/bin/env node
+=== Project Structure ===
+📁 bin/
+  📄 cli.js
+📄 package.json
+
+=== File Contents ===
+
+=== File: package.json ===
+{
+  "name": "media-dl",
+  "version": "1.0.0",
+  "description": "CLI Downloader video/audio lintas platform menggunakan yt-dlp.",
+  "main": "bin/cli.js",
+  "bin": {
+    "media-dl": "bin/cli.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "downloader",
+    "youtube",
+    "cross-platform",
+    "media-dl"
+  ],
+  "author": "Ariska Hidayat",
+  "license": "MIT",
+  "dependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
+
+
+=== File: bin/cli.js ===
+201~200~#!/usr/bin/env node
 
 const { spawn, execSync } = require('child_process');
 const readline = require('readline');
@@ -120,3 +155,4 @@ const rl = readline.createInterface({
 	    	  }
 	    }
 })
+
