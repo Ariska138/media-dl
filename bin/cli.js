@@ -31,7 +31,6 @@ function checkTools() {
   };
 }
 
-// Instalasi yt-dlp dengan Progress Real-time
 async function installYtdlp() {
   console.log('\n⏳ Mengunduh yt-dlp...');
   const url = isWindows
@@ -54,7 +53,6 @@ async function installYtdlp() {
   }
 }
 
-// Instalasi FFmpeg dengan Progress Real-time
 async function installFfmpeg() {
   console.log('\n⏳ Mengunduh FFmpeg (Diperlukan untuk kualitas HD)...');
   try {
@@ -83,7 +81,6 @@ async function installFfmpeg() {
 async function startDownload() {
   let { ytExists, ffExists } = checkTools();
 
-  // Cek tools sebelum lanjut
   if (!ytExists) {
     console.log('\n⚠️ yt-dlp belum terpasang.');
     const ans = await askQuestion('Instal sekarang? (y/n): ');
@@ -101,11 +98,12 @@ async function startDownload() {
   const outputDir = path.join(process.cwd(), 'downloads');
   if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
+  // PERBAIKAN: Menggunakan %(title).100s untuk membatasi panjang nama file agar tidak Error 63
   let args = [
     '--ffmpeg-location',
     FFMPEG_PATH,
     '-o',
-    `${outputDir}/%(title)s.%(ext)s`,
+    `${outputDir}/%(title).100s.%(ext)s`,
     videoURL,
   ];
 
@@ -138,7 +136,6 @@ async function startDownload() {
 
     args.unshift('-f', formatCode);
 
-    // Jika FFmpeg tidak ada, paksa download file tunggal saja (kualitas terbatas)
     if (!ffExists) {
       console.log(
         '⚠️ FFmpeg tidak terdeteksi. Hanya bisa mengunduh kualitas standar.'
@@ -147,7 +144,7 @@ async function startDownload() {
         '-f',
         'best[ext=mp4]',
         '-o',
-        `${outputDir}/%(title)s.%(ext)s`,
+        `${outputDir}/%(title).100s.%(ext)s`,
         videoURL,
       ];
     }
@@ -157,16 +154,14 @@ async function startDownload() {
   const download = spawn(YTDLP_PATH, args);
 
   download.stdout.on('data', (data) => process.stdout.write(data));
-  download.stderr.on('data', (data) => process.stderr.write(data)); // Menampilkan error jika ada
+  download.stderr.on('data', (data) => process.stderr.write(data));
 
   download.on('close', (code) => {
     if (code === 0) {
       console.log(`\n✅ SELESAI! Folder: ${outputDir}`);
       execSync(isMac ? `open "${outputDir}"` : `explorer "${outputDir}"`);
     } else {
-      console.log(
-        '\n❌ Terjadi kesalahan. Pastikan link benar dan FFmpeg terinstal.'
-      );
+      console.log('\n❌ Terjadi kesalahan selama proses download.');
     }
     mainMenu();
   });
