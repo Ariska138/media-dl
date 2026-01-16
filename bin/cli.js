@@ -260,8 +260,18 @@ async function startDownload() {
 }
 
 async function showSupport() {
-  printHeader('SUPPORT DEVELOPER');
-  console.log(`${C.white}Terima kasih telah menggunakan MEDIA-DL!${C.reset}`);
+  printHeader('Tentang Aplikasi');
+	console.log(`${C.white}Terima kasih telah menggunakan MEDIA-DL!${C.reset}`);
+  console.log(
+    `${C.white}Anda dapat mengunduh video/audio dengan kualitas terbaik.${C.reset}`
+  );
+  console.log(
+    `${C.white}Anda dapat mengunduh video dari Youtube(single/playlist), Tiktok, Reel, dan Short.${C.reset}`
+  );
+  console.log(
+    `${C.white}Kami sudah menyertakan Safe Mode untuk kenyamanan Anda mengunduh video.${C.reset}\n`
+  );
+
   console.log(
     `${C.white}Dukungan Anda membantu pemeliharaan skrip ini.${C.reset}\n`
   );
@@ -297,8 +307,8 @@ async function mainMenu() {
   console.log(`\n${C.dim} Layanan Utama:${C.reset}`);
   console.log(` ${C.cyan}1.${C.reset} 📥 Download Media (Video/Playlist)`);
   console.log(` ${C.cyan}2.${C.reset} 🛡️  Toggle Safe Mode (ON/OFF)`);
-	console.log(`\n${C.dim} Dukungan:${C.reset}`);
-  console.log(` ${C.cyan}3.${C.reset} ❤️  Support Developer`);
+  console.log(`\n${C.dim} Informasi:${C.reset}`);
+  console.log(` ${C.cyan}3.${C.reset} ❤️  Tentang Aplikasi`);
   console.log(`\n${C.dim} Pengaturan Engine:${C.reset}`);
   console.log(` ${C.cyan}4.${C.reset} ⚙️  Update/Install yt-dlp`);
   console.log(` ${C.cyan}5.${C.reset} 🔨 Install FFmpeg (macOS)`);
@@ -314,9 +324,9 @@ async function mainMenu() {
       safeMode = !safeMode;
       mainMenu();
       break;
-		case '3':
+    case '3':
       await showSupport();
-      break;	
+      break;
     case '4':
       await installYtdlp();
       break;
