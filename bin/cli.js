@@ -340,44 +340,92 @@ async function showSupport() {
   mainMenu();
 }
 
-// --- MENU UTAMA ---
 async function mainMenu() {
   const { ytExists, ffExists } = checkTools();
-  printHeader('MEDIA-DL MANAGER PRO 2026');
 
-  console.log(`${C.dim} Status Sistem:${C.reset}`);
+  // Menggunakan 2 parameter: Judul dan Summary status singkat
+  printHeader('MEDIA-DL PRO 2026', 'Pusat Kendali Unduhan Media Lokal');
 
-  const safeStatus = safeMode
-    ? `${C.bgBlue}${C.white}  ACTIVE  ${C.reset}`
-    : `${C.bgRed}${C.white} DISABLED ${C.reset}`;
+  // --- SEKSI DASHBOARD (INFO SISTEM) ---
+  const statusYt = ytExists
+    ? `${C.green}Ready${C.reset}`
+    : `${C.red}Not Found${C.reset}`;
+  const statusFf = ffExists
+    ? `${C.green}Ready${C.reset}`
+    : `${C.yellow}Missing${C.reset}`;
+  const safeBadge = safeMode
+    ? `${C.bgBlue}${C.white}  ON  ${C.reset}`
+    : `${C.bgRed}${C.white} OFF ${C.reset}`;
 
-  console.log(` 🛡️  Safe Mode: ${safeStatus}`);
-  console.log(`\n${C.dim} Layanan Utama:${C.reset}`);
-  console.log(` ${C.cyan}1.${C.reset} 📥 Download Media (Video/Playlist)`);
-  console.log(` ${C.cyan}2.${C.reset} 🛡️  Toggle Safe Mode (ON/OFF)`);
-  console.log(` ${C.cyan}3.${C.reset} ❤️  Tentang Aplikasi`);
-  console.log(` ${C.cyan}4.${C.reset} 🗑️  Update Engine`);
-  console.log(` ${C.cyan}5.${C.reset} 🚪 Keluar`);
+  console.log(` ${C.bright}SYSTEM STATUS${C.reset}`);
+  console.log(` 🤖 Engine : [ ${statusYt} ]  |  🎬 FFmpeg : [ ${statusFf} ]`);
+  console.log(` 🛡️  Safe Mode Guard : ${safeBadge}\n`);
 
-  const choice = await askQuestion('\nPilih menu: ');
+  console.log(` ${C.cyan}━${'━'.repeat(48)}${C.reset}`);
+
+  // --- SEKSI NAVIGASI ---
+  console.log(` ${C.bright}MAIN SERVICES${C.reset}`);
+  console.log(
+    `  ${C.cyan}1.${C.reset} 📥 Download Media         ${C.dim}(Video, Music, Playlist)${C.reset}`
+  );
+  console.log(
+    `  ${C.cyan}2.${C.reset} 🛡️  Toggle Safe Mode        ${C.dim}(Sekarang: ${
+      safeMode ? 'Aktif' : 'Nonaktif'
+    })${C.reset}`
+  );
+
+  console.log(`\n ${C.bright}SYSTEM & INFO${C.reset}`);
+  console.log(
+    `  ${C.cyan}3.${C.reset} ⚙️  Maintenance & Update   ${C.dim}(Update engine / Cleanup)${C.reset}`
+  );
+  console.log(
+    `  ${C.cyan}4.${C.reset} ❤️  Tentang Aplikasi       ${C.dim}(Dukungan & Fitur)${C.reset}`
+  );
+  console.log(`  ${C.cyan}0.${C.reset} 🚪 Keluar`);
+
+  console.log(` ${C.cyan}━${'━'.repeat(48)}${C.reset}`);
+
+  const choice = await askQuestion('\nPilih menu (0-4): ');
+
   switch (choice) {
     case '1':
       await startDownload();
       break;
     case '2':
       safeMode = !safeMode;
-      mainMenu();
+      // Berikan feedback visual singkat sebelum refresh menu
+      console.log(
+        `\n${C.yellow} 🛡️  Safe Mode telah ${
+          safeMode ? 'DIAKTIFKAN' : 'DINONAKTIFKAN'
+        }${C.reset}`
+      );
+      setTimeout(() => mainMenu(), 800);
       break;
     case '3':
-      await showSupport();
-      break;
-    case '4':
       await systemMaintenance();
       break;
-    case '5':
-      rl.close();
-      process.exit(0);
+    case '4':
+      await showSupport();
+      break;
+    case '0':
+      console.log(`\n${C.cyan}━${'━'.repeat(48)}${C.reset}`);
+      console.log(
+        `  ${C.bright}${C.white}Terima kasih telah menggunakan MEDIA-DL!${C.reset}`
+      );
+      console.log(
+        `  ${C.green}✨ Semoga Anda sukses, jaya, dan sehat selalu! ✨${C.reset}`
+      );
+      console.log(`${C.cyan}━${'━'.repeat(48)}${C.reset}\n`);
+
+      // Memberikan jeda sebentar sebelum benar-benar menutup terminal
+      setTimeout(() => {
+        rl.close();
+        process.exit(0);
+      }, 1000);
+
+      break;
     default:
+      // Jika salah input, tampilkan kembali menu
       mainMenu();
       break;
   }
