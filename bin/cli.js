@@ -1,31 +1,13 @@
 #!/usr/bin/env node
 
 const { spawn, execSync } = require('child_process');
-const readline = require('readline');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const { C, printHeader, renderProgressBar, askQuestion, rl } = require('./ui');
 
 // --- KONFIGURASI VISUAL (ANSI COLORS) ---
-const C = {
-  reset: '\x1b[0m',
-  bright: '\x1b[1m',
-  dim: '\x1b[2m',
-  cyan: '\x1b[36m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  red: '\x1b[31m',
-  magenta: '\x1b[35m',
-  blue: '\x1b[34m',
-  white: '\x1b[37m',
-  bgBlue: '\x1b[44m',
-  bgRed: '\x1b[41m',
-};
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
 const TOOLS_DIR = path.join(os.homedir(), '.media-dl');
 const isWindows = process.platform === 'win32';
 const isMac = process.platform === 'darwin';
@@ -37,21 +19,6 @@ const FFMPEG_PATH = path.join(TOOLS_DIR, isWindows ? 'ffmpeg.exe' : 'ffmpeg');
 let safeMode = true;
 
 if (!fs.existsSync(TOOLS_DIR)) fs.mkdirSync(TOOLS_DIR, { recursive: true });
-
-// --- UTILS ---
-function askQuestion(query) {
-  return new Promise((resolve) =>
-    rl.question(`${C.bright}${C.yellow}❯ ${C.reset}${query}`, resolve)
-  );
-}
-
-function printHeader(title) {
-  console.clear();
-  const line = '━'.repeat(50);
-  console.log(`${C.cyan}┏${line}┓`);
-  console.log(`${C.cyan}┃ ${C.bright}${C.white}${title.padEnd(48)} ${C.cyan}┃`);
-  console.log(`${C.cyan}┗${line}┛${C.reset}\n`);
-}
 
 function checkTools() {
   return {
@@ -83,8 +50,6 @@ async function installYtdlp() {
       `\n${C.red}❌ Gagal mengunduh. Periksa koneksi internet Anda.${C.reset}`
     );
   }
-  await askQuestion('Tekan Enter untuk kembali...');
-  mainMenu();
 }
 
 async function installFfmpeg() {
@@ -116,8 +81,43 @@ async function installFfmpeg() {
       `${C.red}❌ Gagal menginstal FFmpeg secara otomatis.${C.reset}`
     );
   }
-  await askQuestion('Tekan Enter untuk kembali...');
-  mainMenu();
+}
+
+function runSpawn(command, args) {
+  return new Promise((resolve) => {
+    const proc = spawn(command, args);
+    let lastOutput = '';
+
+    proc.stdout.on('data', (data) => {
+      const output = data.toString();
+      // Regex untuk menangkap progress dari yt-dlp
+      const progressMatch = output.match(
+        /\[download\]\s+(\d+\.\d+)%\s+of\s+.*\s+at\s+([\d\w\./s]+)\s+ETA\s+([\d:]+)/
+      );
+
+      if (progressMatch) {
+        const [_, percent, speed, eta] = progressMatch;
+        renderProgressBar(parseFloat(percent), speed, eta);
+      } else {
+        // Jika bukan bar, print normal (misal: info merging/ffmpeg)
+        if (output.trim() && !output.includes('[download]')) {
+          process.stdout.write(`\n${C.dim}${output.trim()}${C.reset}\n`);
+        }
+      }
+    });
+
+    proc.stderr.on('data', (data) => {
+      const err = data.toString();
+      if (!err.includes('WARNING')) {
+        process.stdout.write(`\n${C.red}⚠️  ${err}${C.reset}`);
+      }
+    });
+
+    proc.on('close', (code) => {
+      process.stdout.write('\n'); // Baris baru setelah selesai
+      resolve(code);
+    });
+  });
 }
 
 // --- DOWNLOAD ENGINE ---
@@ -129,6 +129,14 @@ async function startDownload() {
     );
     await askQuestion('Tekan Enter...');
     return mainMenu();
+  }
+
+  if (!ffExists) {
+    console.log(
+      `${C.yellow}⚠️  Peringatan: FFmpeg tidak ditemukan. Video mungkin tidak tergabung dengan audio.${C.reset}`
+    );
+    const cont = await askQuestion('Lanjutkan saja? (y/n): ');
+    if (cont.toLowerCase() !== 'y') return mainMenu();
   }
 
   const videoURL = await askQuestion('Masukkan Link (Video/Playlist): ');
@@ -243,61 +251,101 @@ async function startDownload() {
     if (ffExists) args.unshift('--recode-video', 'mp4');
   }
 
+  args.push('--no-mtime');
+
   console.log(`\n${C.bgBlue}${C.bright} 🚀 MEMULAI PROSES... ${C.reset}\n`);
-  const download = spawn(YTDLP_PATH, args);
-  download.stdout.on('data', (data) =>
-    process.stdout.write(`${C.dim}${data}${C.reset}`)
-  );
-  download.on('close', (code) => {
-    if (code === 0) {
-      console.log(`\n${C.green}✨ SELESAI! Cek folder: ${outputDir}${C.reset}`);
-      execSync(isMac ? `open "${outputDir}"` : `explorer "${outputDir}"`);
-    } else {
-      console.log(`\n${C.red}❌ Terjadi kesalahan.${C.reset}`);
-    }
-    setTimeout(mainMenu, 2000);
-  });
+
+  const code = await runSpawn(YTDLP_PATH, args); // Menunggu sampai benar-benar selesai
+
+  if (code === 0) {
+    console.log(`\n${C.green}✨ SELESAI! Cek folder: ${outputDir}${C.reset}`);
+    // Auto-open folder
+    try {
+      execSync(
+        isWindows
+          ? `explorer "${outputDir}"`
+          : isMac
+          ? `open "${outputDir}"`
+          : `xdg-open "${outputDir}"`
+      );
+    } catch (e) {}
+  } else {
+    console.log(`\n${C.red}❌ Terjadi kesalahan saat mengunduh.${C.reset}`);
+  }
 }
 
 async function showSupport() {
-  printHeader('Tentang Aplikasi');
-	console.log(`${C.white}Terima kasih telah menggunakan MEDIA-DL!${C.reset}`);
-  console.log(
-    `${C.white} - Anda dapat mengunduh video/audio dengan kualitas terbaik.${C.reset}`
-  );
-  console.log(
-    `${C.white} - Anda dapat mengunduh video dari Youtube(single/playlist), Tiktok, Reel, dan Short.${C.reset}`
-  );
-  console.log(
-    `${C.white} - Kami sudah menyertakan Safe Mode untuk kenyamanan Anda mengunduh video.${C.reset}\n`
-  );
+  // Menggunakan 2 parameter: Judul dan Summary
+  printHeader('TENTANG APLIKASI', 'Media-DL Manager Pro v2.0.0 - 2026');
 
-  console.log(
-    `${C.white}Dukungan Anda membantu pemeliharaan skrip ini.${C.reset}\n`
-  );
-  console.log(
-    `${C.magenta} ☕ Beli Kopi :${C.reset} https://app.midtrans.com/coffee`
-  );
-  console.log(
-    `${C.magenta} 🍕 Beli Pizza :${C.reset} https://app.midtrans.com/pizza`
-  );
-  console.log(`\n${'━'.repeat(50)}`);
+  // --- SEKSI FITUR ---
+  console.log(` ${C.bright}${C.cyan}OVERVIEW${C.reset}`);
+  console.log(` Terima kasih telah memilih MEDIA-DL. Skrip ini dirancang`);
+  console.log(` untuk memudahkan manajemen unduhan media secara lokal.\n`);
+
+  console.log(` ${C.bright}${C.cyan}FITUR UNGGULAN${C.reset}`);
+  const features = [
+    {
+      icon: '✦',
+      title: 'High Quality',
+      desc: 'Mendukung hingga 4K & Audio 320kbps',
+    },
+    {
+      icon: '✦',
+      title: 'Multi-Source',
+      desc: 'YouTube, TikTok, IG Reels, & Shorts',
+    },
+    {
+      icon: '✦',
+      title: 'Batch Mode',
+      desc: 'Mendukung unduhan Playlist secara massal',
+    },
+    {
+      icon: '✦',
+      title: 'Safe Guard',
+      desc: 'Mode proteksi agar akun/IP tidak terblokir',
+    },
+  ];
+
+  features.forEach((f) => {
+    console.log(
+      `  ${C.green}${f.icon}${C.reset} ${C.white}${f.title.padEnd(15)}${
+        C.reset
+      } ${C.dim}• ${f.desc}${C.reset}`
+    );
+  });
+
+  console.log('\n' + '─'.repeat(52));
+
+  // --- SEKSI DUKUNGAN ---
+  console.log(`\n ${C.bright}${C.magenta}DUKUNGAN & DONASI${C.reset}`);
+  console.log(` Dukungan Anda sangat membantu pengembang untuk terus`);
+  console.log(` memperbarui engine dan fitur aplikasi ini.\n`);
+
+  // Menampilkan Link dengan label background agar menonjol
+  const links = [
+    { label: ' ☕ BELI KOPI ', url: 'https://app.midtrans.com/coffee' },
+    { label: ' 🍕 BELI PIZZA', url: 'https://app.midtrans.com/pizza' },
+  ];
+
+  links.forEach((l) => {
+    console.log(
+      `  ${C.bgBlue}${C.white}${l.label}${C.reset} ${C.blue}➜${C.reset} ${C.dim}${l.url}${C.reset}`
+    );
+  });
+
+  console.log(`\n${C.cyan}${'━'.repeat(52)}${C.reset}`);
+
   await askQuestion('Tekan Enter untuk kembali ke Menu Utama...');
   mainMenu();
 }
+
 // --- MENU UTAMA ---
 async function mainMenu() {
   const { ytExists, ffExists } = checkTools();
   printHeader('MEDIA-DL MANAGER PRO 2026');
 
   console.log(`${C.dim} Status Sistem:${C.reset}`);
-  console.log(
-    ` ⬇️  yt-dlp : ${ytExists ? C.green + 'Ready' : C.red + 'Not Found'}${
-      C.reset
-    } | 🎥 FFmpeg : ${ffExists ? C.green + 'Ready' : C.red + 'Not Found'}${
-      C.reset
-    }`
-  );
 
   const safeStatus = safeMode
     ? `${C.bgBlue}${C.white}  ACTIVE  ${C.reset}`
@@ -307,13 +355,9 @@ async function mainMenu() {
   console.log(`\n${C.dim} Layanan Utama:${C.reset}`);
   console.log(` ${C.cyan}1.${C.reset} 📥 Download Media (Video/Playlist)`);
   console.log(` ${C.cyan}2.${C.reset} 🛡️  Toggle Safe Mode (ON/OFF)`);
-  console.log(`\n${C.dim} Informasi:${C.reset}`);
   console.log(` ${C.cyan}3.${C.reset} ❤️  Tentang Aplikasi`);
-  console.log(`\n${C.dim} Pengaturan Engine:${C.reset}`);
-  console.log(` ${C.cyan}4.${C.reset} ⚙️  Update/Install yt-dlp`);
-  console.log(` ${C.cyan}5.${C.reset} 🔨 Install FFmpeg (macOS)`);
-  console.log(` ${C.cyan}6.${C.reset} 🗑️  Cleanup Tools`);
-  console.log(` ${C.cyan}7.${C.reset} 🚪 Keluar`);
+  console.log(` ${C.cyan}4.${C.reset} 🗑️  Update Engine`);
+  console.log(` ${C.cyan}5.${C.reset} 🚪 Keluar`);
 
   const choice = await askQuestion('\nPilih menu: ');
   switch (choice) {
@@ -328,18 +372,9 @@ async function mainMenu() {
       await showSupport();
       break;
     case '4':
-      await installYtdlp();
+      await systemMaintenance();
       break;
     case '5':
-      await installFfmpeg();
-      break;
-    case '6':
-      const conf = await askQuestion('Hapus semua file tools? (y/n): ');
-      if (conf.toLowerCase() === 'y')
-        fs.rmSync(TOOLS_DIR, { recursive: true, force: true });
-      mainMenu();
-      break;
-    case '7':
       rl.close();
       process.exit(0);
     default:
@@ -348,5 +383,139 @@ async function mainMenu() {
   }
 }
 
-mainMenu();
+async function cleanUp() {
+  const conf = await askQuestion('Hapus semua file tools? (y/n): ');
+  if (conf.toLowerCase() === 'y')
+    fs.rmSync(TOOLS_DIR, { recursive: true, force: true });
+}
+
+function checkTools() {
+  return {
+    ytExists: fs.existsSync(YTDLP_PATH),
+    ffExists: fs.existsSync(FFMPEG_PATH),
+    allReady: fs.existsSync(YTDLP_PATH) && fs.existsSync(FFMPEG_PATH),
+  };
+}
+
+async function firstTimeSetup() {
+  while (true) {
+    const { ytExists, ffExists } = checkTools();
+    printHeader(
+      'FIRST-TIME SETUP',
+      'Komponen diperlukan untuk menjalankan aplikasi'
+    );
+
+    console.log(`${C.white}Status Instalasi:${C.reset}`);
+    console.log(
+      ` [${ytExists ? C.green + '✓' : C.red + '✗'}${
+        C.reset
+      }] Engine yt-dlp (Wajib)`
+    );
+    console.log(
+      ` [${ffExists ? C.green + '✓' : C.red + '✗'}${
+        C.reset
+      }] FFmpeg (Direkomendasikan)`
+    );
+
+    console.log(
+      `\n${C.yellow}Aplikasi belum siap digunakan. Pilih opsi:${C.reset}`
+    );
+    console.log(` ${C.cyan}1.${C.reset} Install Semua Komponen Otomatis`);
+    console.log(` ${C.cyan}0.${C.reset} Keluar dari Aplikasi`);
+
+    const choice = await askQuestion('\nPilih: ');
+
+    if (choice === '1') {
+      if (!ytExists) await installYtdlp();
+      if (!ffExists) await installFfmpeg();
+
+      const status = checkTools();
+      if (status.ytExists) {
+        console.log(
+          `\n${C.green}✨ Setup Selesai! Membuka Menu Utama...${C.reset}`
+        );
+        await new Promise((r) => setTimeout(r, 1500));
+        return mainMenu(); // Berhasil, lanjut ke menu utama
+      }
+    } else if (choice === '0') {
+      console.log('Menutup aplikasi...');
+      process.exit(0);
+    }
+  }
+}
+
+async function systemMaintenance() {
+  let inMaintenance = true;
+
+  while (inMaintenance) {
+    const { ytExists, ffExists } = checkTools();
+    printHeader(
+      'SYSTEM MAINTENANCE',
+      'Update engine atau bersihkan file sistem'
+    );
+
+    console.log(`${C.white}Versi Terinstal:${C.reset}`);
+    console.log(
+      ` • yt-dlp : ${ytExists ? C.green + 'Ready' : C.red + 'Not Found'}${
+        C.reset
+      }`
+    );
+    console.log(
+      ` • FFmpeg : ${ffExists ? C.green + 'Ready' : C.red + 'Not Found'}${
+        C.reset
+      }`
+    );
+
+    console.log(`\n${C.bright}Opsi Pemeliharaan:${C.reset}`);
+    console.log(` ${C.cyan}1.${C.reset} Update / Reinstall Engines`);
+    console.log(` ${C.cyan}2.${C.reset} 🗑️  Hapus Semua Tools (Reset System)`);
+    console.log(` ${C.cyan}3.${C.reset} ⬅️  Kembali ke Menu Utama`);
+
+    const choice = await askQuestion('\nPilih tindakan: ');
+
+    switch (choice) {
+      case '1':
+        await installYtdlp();
+        await installFfmpeg();
+        await askQuestion('\nUpdate selesai. Tekan Enter...');
+        break;
+
+      case '2':
+        const confirm = await askQuestion(
+          `${C.bgRed}${C.white} KONFIRMASI ${C.reset} Hapus semua tools? (y/n): `
+        );
+        if (confirm.toLowerCase() === 'y') {
+          await cleanUp(); // Panggil fungsi penghapusan folder
+          console.log(
+            `${C.yellow}Sistem dibersihkan. Anda akan diarahkan ke Setup Wizard.${C.reset}`
+          );
+          await askQuestion('Tekan Enter...');
+          return bootstrap(); // Kembali ke pengecekan awal
+        }
+        break;
+
+      case '3':
+        inMaintenance = false;
+        return mainMenu();
+
+      default:
+        break;
+    }
+  }
+}
+
+// --- ENTRY POINT ---
+async function bootstrap() {
+  const status = checkTools();
+
+  if (!status.allReady) {
+    // Jika ada yang kurang, masuk ke mode instalasi
+    await firstTimeSetup();
+  } else {
+    // Jika semua siap, langsung ke menu download
+    mainMenu();
+  }
+}
+
+bootstrap();
 
