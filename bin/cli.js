@@ -29,7 +29,10 @@ function checkTools() {
 
 // --- INSTALLERS ---
 async function installYtdlp() {
-  printHeader('INSTALL / UPDATE YT-DLP');
+  
+	if (!fs.existsSync(TOOLS_DIR)) fs.mkdirSync(TOOLS_DIR, { recursive: true });
+  
+	printHeader('INSTALL / UPDATE YT-DLP');
   console.log(`${C.blue}⏳ Sedang mengunduh engine terbaru...${C.reset}`);
   const url = isWindows
     ? 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe'
