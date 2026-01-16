@@ -241,8 +241,8 @@ async function startDownload() {
       console.log(
         `${C.red}❌ Error: Anda wajib menginstal FFmpeg untuk mengunduh audio.${C.reset}`
       );
-      await askQuestion('Kembali...');
-      return mainMenu();
+      await askQuestion('Tekan Enter untuk kembali ke Menu Utama...');
+      mainMenu();
     }
     args.unshift('-x', '--audio-format', 'mp3');
   } else {
@@ -274,6 +274,8 @@ async function startDownload() {
   } else {
     console.log(`\n${C.red}❌ Terjadi kesalahan saat mengunduh.${C.reset}`);
   }
+  await askQuestion('Tekan Enter untuk kembali ke Menu Utama...');
+  mainMenu();
 }
 
 async function showSupport() {
