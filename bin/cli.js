@@ -123,7 +123,7 @@ function runSpawn(command, args) {
 }
 
 // --- DOWNLOAD ENGINE ---
-async function startDownload() {
+async function startDownload(videoURLFromArgs = null) {
   let { ytExists, ffExists } = checkTools();
   if (!ytExists) {
     console.log(
@@ -141,7 +141,8 @@ async function startDownload() {
     if (cont.toLowerCase() !== 'y') return mainMenu();
   }
 
-  const videoURL = await askQuestion('Masukkan Link (Video/Playlist): ');
+  const videoURL =
+    videoURLFromArgs || (await askQuestion('Masukkan Link (Video/Playlist): '));
   if (!videoURL) return mainMenu();
 
   console.log(`${C.dim}⏳ Menganalisa tautan...${C.reset}`);
@@ -559,13 +560,19 @@ async function systemMaintenance() {
 // --- ENTRY POINT ---
 async function bootstrap() {
   const status = checkTools();
-
   if (!status.allReady) {
-    // Jika ada yang kurang, masuk ke mode instalasi
     await firstTimeSetup();
   } else {
-    // Jika semua siap, langsung ke menu download
-    mainMenu();
+    // process.argv[2] mengambil argumen pertama setelah nama perintah
+    const urlArgument = process.argv[2];
+
+    if (urlArgument) {
+      // Jika ada URL di terminal, langsung jalankan download
+      await startDownload(urlArgument);
+    } else {
+      // Jika tidak ada, masuk ke menu utama seperti biasa [cite: 113]
+      mainMenu();
+    }
   }
 }
 
