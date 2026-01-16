@@ -21,3 +21,5 @@ desktop.ini
 .vscode/
 .idea/
 *.swp
+
+package-info.txt
