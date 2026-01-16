@@ -61,6 +61,23 @@ async function installFfmpeg() {
   } catch (e) { console.error('❌ Gagal instal FFmpeg.'); }
 }
 
+// Fungsi untuk memproses pilihan nomor (misal: 1,3,5-10)
+function parseSelection(input, max) {
+  if (!input || input.toLowerCase() === 'all') return null;
+  const selected = new Set();
+  const parts = input.split(',');
+  parts.forEach(part => {
+    if (part.includes('-')) {
+      const [start, end] = part.split('-').map(Number);
+      for (let i = start; i <= end; i++) if (i > 0 && i <= max) selected.add(i);
+    } else {
+      const num = parseInt(part.trim());
+      if (num > 0 && num <= max) selected.add(num);
+    }
+  });
+  return Array.from(selected).join(',');
+}
+
 async function startDownload() {
   let { ytExists, ffExists } = checkTools();
   if (!ytExists) {
@@ -70,7 +87,31 @@ async function startDownload() {
     if (!fs.existsSync(YTDLP_PATH)) return mainMenu();
   }
 
-  const videoURL = await askQuestion('\n🔗 Masukkan Link: ');
+  const videoURL = await askQuestion('\n🔗 Masukkan Link (Video/Playlist): ');
+  
+  console.log('⏳ Mengecek link...');
+  let playlistInfo = { isPlaylist: false, title: '', items: [] };
+  
+  try {
+    const rawInfo = execSync(`"${YTDLP_PATH}" --flat-playlist --print "%(playlist_title)s|%(index)s. %(title)s" "${videoURL}"`, { encoding: 'utf-8' });
+    const lines = rawInfo.trim().split('\n');
+    if (lines.length > 1 || videoURL.includes('playlist?list=')) {
+      playlistInfo.isPlaylist = true;
+      playlistInfo.title = lines[0].split('|')[0] || 'Unduhan Playlist';
+      playlistInfo.items = lines.map(l => l.split('|')[1]).filter(Boolean);
+    }
+  } catch (e) {
+    // Jika bukan playlist atau error, biarkan sebagai single video
+  }
+
+  let playlistSelection = null;
+  if (playlistInfo.isPlaylist) {
+    console.log(`\n📂 PLAYLIST TERDETEKSI: ${playlistInfo.title}`);
+    playlistInfo.items.forEach(item => console.log(item));
+    const selectionInput = await askQuestion('\nPilih nomor video (contoh: 1,3,5-10) atau tekan Enter untuk semua: ');
+    playlistSelection = parseSelection(selectionInput, playlistInfo.items.length);
+  }
+
   console.log('\n[PILIH FORMAT]');
   console.log('1. Audio (MP3)');
   console.log('2. Video MP4 (Sangat Kompatibel Mac/QuickTime)');
@@ -78,13 +119,25 @@ async function startDownload() {
 
   const baseDir = path.join(os.homedir(), 'Downloads', 'media-dl');
   const subFolder = (mode === '1') ? 'audio' : 'video';
-  const finalOutputDir = path.join(baseDir, subFolder);
+  let finalOutputDir = path.join(baseDir, subFolder);
+
+  // Jika playlist, buat folder khusus di dalam folder audio/video
+  if (playlistInfo.isPlaylist) {
+    const folderName = playlistInfo.title.replace(/[\\/:"*?<>|]/g, '_'); // Sanitasi nama folder
+    finalOutputDir = path.join(finalOutputDir, folderName);
+  }
+
   if (!fs.existsSync(finalOutputDir)) fs.mkdirSync(finalOutputDir, { recursive: true });
 
-  // Filter Format: Prioritaskan AVC1 + AAC
   const qtFormat = 'bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[vcodec^=avc1]/best';
-  
   let args = ['--ffmpeg-location', FFMPEG_PATH, '-o', `${finalOutputDir}/%(title).100s.%(ext)s`, videoURL];
+
+  // Tambahkan filter playlist jika ada pilihan
+  if (playlistSelection) {
+    args.push('--playlist-items', playlistSelection);
+  } else if (!playlistInfo.isPlaylist) {
+    args.push('--no-playlist');
+  }
 
   if (mode === '1') {
     if (!ffExists) { console.log('❌ Butuh FFmpeg.'); return mainMenu(); }
@@ -92,8 +145,8 @@ async function startDownload() {
   } else {
     console.log('\n[PILIH KUALITAS]');
     console.log('1. Terbaik (Auto-Conversion ke MP4)');
-    console.log('2. 1080p (Pasti MP4)');
-    console.log('3. 720p (Pasti MP4)');
+    console.log('2. 1080p');
+    console.log('3. 720p');
     const res = await askQuestion('Pilih: ');
     
     let fCode = qtFormat;
@@ -101,21 +154,18 @@ async function startDownload() {
     if (res === '3') fCode = 'bestvideo[height<=720][vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[height<=720]/best';
     
     args.unshift('-f', fCode);
-    
-    // FITUR BARU: Jika FFmpeg ada, paksa konversi ke MP4 agar pasti bisa dibuka QuickTime
-    if (ffExists) {
-        args.unshift('--recode-video', 'mp4'); 
-    }
+    if (ffExists) args.unshift('--recode-video', 'mp4'); 
   }
 
-  console.log('\n🚀 Memulai proses (dan konversi jika perlu)...');
+  console.log('\n🚀 Memulai proses unduhan...');
   const download = spawn(YTDLP_PATH, args);
+  
   download.stdout.on('data', (data) => process.stdout.write(data));
   download.stderr.on('data', (data) => process.stderr.write(data));
 
   download.on('close', (code) => {
     if (code === 0) {
-      console.log(`\n✅ BERHASIL! File tersimpan di: ${finalOutputDir}`);
+      console.log(`\n✅ BERHASIL! File disimpan di: ${finalOutputDir}`);
       execSync(isMac ? `open "${finalOutputDir}"` : `explorer "${finalOutputDir}"`);
     } else { console.log('\n❌ Gagal saat mendownload atau mengonversi.'); }
     mainMenu();
@@ -129,7 +179,7 @@ async function mainMenu() {
   console.log('====================================');
   console.log(` OS     : ${process.platform} | yt-dlp: ${ytExists?'✅':'❌'} | ffmpeg: ${ffExists?'✅':'❌'}`);
   console.log('------------------------------------');
-  console.log(' 1. 📥 Download Media');
+  console.log(' 1. 📥 Download Media (Single/Playlist)');
   console.log(' 2. ⚙️  Update yt-dlp');
   console.log(' 3. 🔨 Instal FFmpeg (macOS)');
   console.log(' 4. 🗑️  Uninstall & Hapus Data');
