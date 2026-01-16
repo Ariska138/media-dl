@@ -259,6 +259,22 @@ async function startDownload() {
   });
 }
 
+async function showSupport() {
+  printHeader('SUPPORT DEVELOPER');
+  console.log(`${C.white}Terima kasih telah menggunakan MEDIA-DL!${C.reset}`);
+  console.log(
+    `${C.white}Dukungan Anda membantu pemeliharaan skrip ini.${C.reset}\n`
+  );
+  console.log(
+    `${C.magenta} ☕ Beli Kopi :${C.reset} https://app.midtrans.com/coffee`
+  );
+  console.log(
+    `${C.magenta} 🍕 Beli Pizza :${C.reset} https://app.midtrans.com/pizza`
+  );
+  console.log(`\n${'━'.repeat(50)}`);
+  await askQuestion('Tekan Enter untuk kembali ke Menu Utama...');
+  mainMenu();
+}
 // --- MENU UTAMA ---
 async function mainMenu() {
   const { ytExists, ffExists } = checkTools();
@@ -281,11 +297,13 @@ async function mainMenu() {
   console.log(`\n${C.dim} Layanan Utama:${C.reset}`);
   console.log(` ${C.cyan}1.${C.reset} 📥 Download Media (Video/Playlist)`);
   console.log(` ${C.cyan}2.${C.reset} 🛡️  Toggle Safe Mode (ON/OFF)`);
+	console.log(`\n${C.dim} Dukungan:${C.reset}`);
+  console.log(` ${C.cyan}3.${C.reset} ❤️  Support Developer`);
   console.log(`\n${C.dim} Pengaturan Engine:${C.reset}`);
-  console.log(` ${C.cyan}3.${C.reset} ⚙️  Update/Install yt-dlp`);
-  console.log(` ${C.cyan}4.${C.reset} 🔨 Install FFmpeg (macOS)`);
-  console.log(` ${C.cyan}5.${C.reset} 🗑️  Cleanup Tools`);
-  console.log(` ${C.cyan}6.${C.reset} 🚪 Keluar`);
+  console.log(` ${C.cyan}4.${C.reset} ⚙️  Update/Install yt-dlp`);
+  console.log(` ${C.cyan}5.${C.reset} 🔨 Install FFmpeg (macOS)`);
+  console.log(` ${C.cyan}6.${C.reset} 🗑️  Cleanup Tools`);
+  console.log(` ${C.cyan}7.${C.reset} 🚪 Keluar`);
 
   const choice = await askQuestion('\nPilih menu: ');
   switch (choice) {
@@ -296,19 +314,22 @@ async function mainMenu() {
       safeMode = !safeMode;
       mainMenu();
       break;
-    case '3':
+		case '3':
+      await showSupport();
+      break;	
+    case '4':
       await installYtdlp();
       break;
-    case '4':
+    case '5':
       await installFfmpeg();
       break;
-    case '5':
+    case '6':
       const conf = await askQuestion('Hapus semua file tools? (y/n): ');
       if (conf.toLowerCase() === 'y')
         fs.rmSync(TOOLS_DIR, { recursive: true, force: true });
       mainMenu();
       break;
-    case '6':
+    case '7':
       rl.close();
       process.exit(0);
     default:
@@ -318,3 +339,4 @@ async function mainMenu() {
 }
 
 mainMenu();
+
