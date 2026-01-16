@@ -6,12 +6,11 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-// ANSI Color Codes untuk tampilan Premium
+// --- KONFIGURASI VISUAL (ANSI COLORS) ---
 const C = {
   reset: '\x1b[0m',
   bright: '\x1b[1m',
   dim: '\x1b[2m',
-  underscore: '\x1b[4m',
   cyan: '\x1b[36m',
   green: '\x1b[32m',
   yellow: '\x1b[33m',
@@ -20,13 +19,13 @@ const C = {
   blue: '\x1b[34m',
   white: '\x1b[37m',
   bgBlue: '\x1b[44m',
+  bgRed: '\x1b[41m',
 };
 
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
 });
-
 const TOOLS_DIR = path.join(os.homedir(), '.media-dl');
 const isWindows = process.platform === 'win32';
 const isMac = process.platform === 'darwin';
@@ -34,19 +33,16 @@ const isMac = process.platform === 'darwin';
 const YTDLP_PATH = path.join(TOOLS_DIR, isWindows ? 'yt-dlp.exe' : 'yt-dlp');
 const FFMPEG_PATH = path.join(TOOLS_DIR, isWindows ? 'ffmpeg.exe' : 'ffmpeg');
 
+// State Aplikasi
+let safeMode = true;
+
 if (!fs.existsSync(TOOLS_DIR)) fs.mkdirSync(TOOLS_DIR, { recursive: true });
 
+// --- UTILS ---
 function askQuestion(query) {
   return new Promise((resolve) =>
     rl.question(`${C.bright}${C.yellow}❯ ${C.reset}${query}`, resolve)
   );
-}
-
-function checkTools() {
-  return {
-    ytExists: fs.existsSync(YTDLP_PATH),
-    ffExists: fs.existsSync(FFMPEG_PATH),
-  };
 }
 
 function printHeader(title) {
@@ -57,8 +53,17 @@ function printHeader(title) {
   console.log(`${C.cyan}┗${line}┛${C.reset}\n`);
 }
 
+function checkTools() {
+  return {
+    ytExists: fs.existsSync(YTDLP_PATH),
+    ffExists: fs.existsSync(FFMPEG_PATH),
+  };
+}
+
+// --- INSTALLERS ---
 async function installYtdlp() {
-  console.log(`\n${C.blue}⏳ Mengunduh yt-dlp...${C.reset}`);
+  printHeader('INSTALL / UPDATE YT-DLP');
+  console.log(`${C.blue}⏳ Sedang mengunduh engine terbaru...${C.reset}`);
   const url = isWindows
     ? 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe'
     : 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp';
@@ -72,16 +77,25 @@ async function installYtdlp() {
       execSync(`curl -L -# "${url}" -o "${YTDLP_PATH}"`, { stdio: 'inherit' });
       execSync(`chmod a+rx "${YTDLP_PATH}"`);
     }
-    console.log(`${C.green}✅ yt-dlp berhasil diinstal.${C.reset}`);
+    console.log(`\n${C.green}✅ yt-dlp berhasil dikonfigurasi!${C.reset}`);
   } catch (e) {
-    console.error(`${C.red}❌ Gagal mengunduh yt-dlp.${C.reset}`);
+    console.error(
+      `\n${C.red}❌ Gagal mengunduh. Periksa koneksi internet Anda.${C.reset}`
+    );
   }
+  await askQuestion('Tekan Enter untuk kembali...');
+  mainMenu();
 }
 
 async function installFfmpeg() {
-  console.log(`\n${C.blue}⏳ Mengunduh FFmpeg...${C.reset}`);
+  printHeader('INSTALL FFmpeg');
+  console.log(
+    `${C.dim}FFmpeg diperlukan untuk kualitas 1080p+ dan konversi MP3.${C.reset}\n`
+  );
+
   try {
     if (isMac) {
+      console.log(`${C.blue}⏳ Mengunduh FFmpeg untuk macOS...${C.reset}`);
       const zipPath = path.join(TOOLS_DIR, 'ffmpeg.zip');
       execSync(
         `curl -L -# "https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip" -o "${zipPath}"`,
@@ -90,46 +104,37 @@ async function installFfmpeg() {
       execSync(`unzip -o "${zipPath}" -d "${TOOLS_DIR}"`, { stdio: 'inherit' });
       execSync(`rm "${zipPath}"`);
       execSync(`chmod a+rx "${FFMPEG_PATH}"`);
-      console.log(`${C.green}✅ FFmpeg berhasil disiapkan.${C.reset}`);
-    } else {
+      console.log(`\n${C.green}✅ FFmpeg aktif di macOS.${C.reset}`);
+    } else if (isWindows) {
       console.log(
-        `${C.yellow}ℹ️ Silakan instal FFmpeg secara manual untuk Windows/Linux agar fitur Audio aktif.${C.reset}`
+        `${C.yellow}ℹ️ Untuk Windows, disarankan mengunduh 'ffmpeg.exe' secara manual`
       );
+      console.log(`dan letakkan di: ${C.white}${TOOLS_DIR}${C.reset}`);
     }
   } catch (e) {
-    console.error(`${C.red}❌ Gagal instal FFmpeg.${C.reset}`);
+    console.error(
+      `${C.red}❌ Gagal menginstal FFmpeg secara otomatis.${C.reset}`
+    );
   }
+  await askQuestion('Tekan Enter untuk kembali...');
+  mainMenu();
 }
 
-function parseSelection(input, max) {
-  if (!input || input.toLowerCase() === 'all') return null;
-  const selected = new Set();
-  const parts = input.split(',');
-  parts.forEach((part) => {
-    if (part.includes('-')) {
-      const [start, end] = part.split('-').map(Number);
-      for (let i = start; i <= end; i++) if (i > 0 && i <= max) selected.add(i);
-    } else {
-      const num = parseInt(part.trim());
-      if (num > 0 && num <= max) selected.add(num);
-    }
-  });
-  return Array.from(selected).join(',');
-}
-
+// --- DOWNLOAD ENGINE ---
 async function startDownload() {
   let { ytExists, ffExists } = checkTools();
   if (!ytExists) {
-    console.log(`\n${C.yellow}⚠️ yt-dlp belum terpasang.${C.reset}`);
-    const ans = await askQuestion('Instal sekarang? (y/n): ');
-    if (ans.toLowerCase() === 'y') await installYtdlp();
-    if (!fs.existsSync(YTDLP_PATH)) return mainMenu();
+    console.log(
+      `\n${C.red}❌ Engine yt-dlp tidak ditemukan. Silakan pilih menu Update/Install.${C.reset}`
+    );
+    await askQuestion('Tekan Enter...');
+    return mainMenu();
   }
 
   const videoURL = await askQuestion('Masukkan Link (Video/Playlist): ');
   if (!videoURL) return mainMenu();
 
-  console.log(`${C.dim}⏳ Menganalisa konten...${C.reset}`);
+  console.log(`${C.dim}⏳ Menganalisa tautan...${C.reset}`);
   let playlistInfo = { isPlaylist: false, title: '', items: [] };
 
   try {
@@ -148,27 +153,39 @@ async function startDownload() {
   let playlistSelection = null;
   if (playlistInfo.isPlaylist) {
     console.log(
-      `\n${C.bgBlue}${C.bright} 📂 PLAYLIST: ${playlistInfo.title} ${C.reset}`
+      `\n${C.bgBlue}${C.bright} 📂 PLAYLIST TERDETEKSI: ${playlistInfo.title} ${C.reset}`
     );
     playlistInfo.items.forEach((item, index) => {
-      const num = (index + 1).toString().padStart(3, ' ');
-      console.log(`${C.cyan}${num}.${C.reset} ${item}`);
+      console.log(
+        `${C.cyan}${(index + 1).toString().padStart(3, ' ')}.${C.reset} ${item}`
+      );
     });
-
     console.log(
-      `\n${C.dim}Tip: Gunakan format 1,3,5-10 atau tekan Enter untuk semua.${C.reset}`
+      `\n${C.dim}Contoh pilih nomor: 1,3,5-10 atau biarkan kosong untuk semua.${C.reset}`
     );
-    const selectionInput = await askQuestion('Pilih nomor video: ');
-    playlistSelection = parseSelection(
-      selectionInput,
-      playlistInfo.items.length
-    );
+    const selectionInput = await askQuestion('Pilih nomor: ');
+
+    // Parsing nomor playlist
+    if (selectionInput) {
+      const selected = new Set();
+      selectionInput.split(',').forEach((p) => {
+        if (p.includes('-')) {
+          const [s, e] = p.split('-').map(Number);
+          for (let i = s; i <= e; i++)
+            if (i > 0 && i <= playlistInfo.items.length) selected.add(i);
+        } else {
+          const n = parseInt(p.trim());
+          if (n > 0 && n <= playlistInfo.items.length) selected.add(n);
+        }
+      });
+      playlistSelection = Array.from(selected).join(',');
+    }
   }
 
   console.log(`\n${C.bright} [ PILIH FORMAT ]${C.reset}`);
-  console.log(`${C.green} 1.${C.reset} Video MP4 (QuickTime Compatible)`);
+  console.log(` ${C.green}1.${C.reset} Video (Kualitas Terbaik/MP4)`);
   console.log(
-    `${C.green} 2.${C.reset} Audio MP3 ${
+    ` ${C.green}2.${C.reset} Audio Only (MP3) ${
       ffExists ? C.green + '✅' : C.red + '❌ (Butuh FFmpeg)'
     }`
   );
@@ -176,169 +193,124 @@ async function startDownload() {
 
   const baseDir = path.join(os.homedir(), 'Downloads', 'media-dl');
   const subFolder = mode === '2' ? 'audio' : 'video';
-  let finalOutputDir = path.join(baseDir, subFolder);
-
-  if (playlistInfo.isPlaylist) {
-    const folderName = playlistInfo.title.replace(/[\\/:"*?<>|]/g, '_');
-    finalOutputDir = path.join(finalOutputDir, folderName);
-  }
-
-  if (!fs.existsSync(finalOutputDir))
-    fs.mkdirSync(finalOutputDir, { recursive: true });
+  let outputDir = path.join(baseDir, subFolder);
+  if (playlistInfo.isPlaylist)
+    outputDir = path.join(
+      outputDir,
+      playlistInfo.title.replace(/[\\/:"*?<>|]/g, '_')
+    );
+  if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
   let args = [
     '--ffmpeg-location',
     FFMPEG_PATH,
     '-o',
-    `${finalOutputDir}/%(title).100s.%(ext)s`,
+    `${outputDir}/%(title).100s.%(ext)s`,
     videoURL,
   ];
 
-  if (playlistSelection) {
-    args.push('--playlist-items', playlistSelection);
-  } else if (!playlistInfo.isPlaylist) {
-    args.push('--no-playlist');
+  // Integrasi Safe Mode
+  if (safeMode) {
+    args.push(
+      '--ratelimit',
+      '5M',
+      '--sleep-interval',
+      '3',
+      '--max-sleep-interval',
+      '10',
+      '--user-agent',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
+    );
   }
+
+  if (playlistSelection) args.push('--playlist-items', playlistSelection);
+  else if (!playlistInfo.isPlaylist) args.push('--no-playlist');
 
   if (mode === '2') {
     if (!ffExists) {
       console.log(
-        `${C.red}❌ Error: Fitur audio membutuhkan FFmpeg.${C.reset}`
+        `${C.red}❌ Error: Anda wajib menginstal FFmpeg untuk mengunduh audio.${C.reset}`
       );
-      await askQuestion('Tekan Enter untuk kembali...');
+      await askQuestion('Kembali...');
       return mainMenu();
     }
     args.unshift('-x', '--audio-format', 'mp3');
   } else {
-    console.log(`\n${C.bright} [ KUALITAS VIDEO ]${C.reset}`);
-    console.log(`${C.cyan} 1.${C.reset} Terbaik (Auto-Conversion)`);
-    console.log(`${C.cyan} 2.${C.reset} High Definition (1080p)`);
-    console.log(`${C.cyan} 3.${C.reset} Standard (720p)`);
-    const res = await askQuestion('Pilih: ');
-
-    let fCode =
-      'bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[vcodec^=avc1]/best';
-    if (res === '2')
-      fCode =
-        'bestvideo[height<=1080][vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[height<=1080]/best';
-    if (res === '3')
-      fCode =
-        'bestvideo[height<=720][vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[height<=720]/best';
-
-    args.unshift('-f', fCode);
+    args.unshift(
+      '-f',
+      'bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[vcodec^=avc1]/best'
+    );
     if (ffExists) args.unshift('--recode-video', 'mp4');
   }
 
-  console.log(`\n${C.bgBlue}${C.bright} 🚀 PROCESSING... ${C.reset}\n`);
+  console.log(`\n${C.bgBlue}${C.bright} 🚀 MEMULAI PROSES... ${C.reset}\n`);
   const download = spawn(YTDLP_PATH, args);
-
-  download.stdout.on('data', (data) => {
-    const str = data.toString();
-    // Menyaring output agar lebih bersih (opsional)
-    if (str.includes('%')) {
-      process.stdout.write(`${C.cyan}  ${str.trim()}\r${C.reset}`);
-    } else {
-      process.stdout.write(`${C.dim}${str}${C.reset}`);
-    }
-  });
-
-  download.stderr.on('data', (data) =>
-    process.stdout.write(`${C.red}${data}${C.reset}`)
+  download.stdout.on('data', (data) =>
+    process.stdout.write(`${C.dim}${data}${C.reset}`)
   );
-
   download.on('close', (code) => {
     if (code === 0) {
-      console.log(`\n\n${C.green}✨ SELESAI! File disimpan di:${C.reset}`);
-      console.log(`${C.underscore}${finalOutputDir}${C.reset}`);
-      execSync(
-        isMac ? `open "${finalOutputDir}"` : `explorer "${finalOutputDir}"`
-      );
+      console.log(`\n${C.green}✨ SELESAI! Cek folder: ${outputDir}${C.reset}`);
+      execSync(isMac ? `open "${outputDir}"` : `explorer "${outputDir}"`);
     } else {
-      console.log(`\n${C.red}❌ Terjadi kesalahan saat mengunduh.${C.reset}`);
+      console.log(`\n${C.red}❌ Terjadi kesalahan.${C.reset}`);
     }
     setTimeout(mainMenu, 2000);
   });
 }
 
-async function showSupport() {
-  printHeader('SUPPORT DEVELOPER');
-  console.log(`${C.white}Terima kasih telah menggunakan MEDIA-DL!${C.reset}`);
-  console.log(
-    `${C.white}Dukungan Anda membantu pemeliharaan skrip ini.${C.reset}\n`
-  );
-  console.log(
-    `${C.magenta} ☕ Beli Kopi :${C.reset} https://app.midtrans.com/coffee`
-  );
-  console.log(
-    `${C.magenta} 🍕 Beli Pizza :${C.reset} https://app.midtrans.com/pizza`
-  );
-  console.log(`\n${'━'.repeat(50)}`);
-  await askQuestion('Tekan Enter untuk kembali ke Menu Utama...');
-  mainMenu();
-}
-
+// --- MENU UTAMA ---
 async function mainMenu() {
   const { ytExists, ffExists } = checkTools();
-  printHeader('MEDIA-DL MANAGER 2026');
+  printHeader('MEDIA-DL MANAGER PRO 2026');
 
   console.log(`${C.dim} Status Sistem:${C.reset}`);
-  console.log(` 💻 OS      : ${C.bright}${process.platform}${C.reset}`);
   console.log(
-    ` ⬇️  yt-dlp  : ${ytExists ? C.green + 'Ready' : C.red + 'Not Installed'}${
+    ` ⬇️  yt-dlp : ${ytExists ? C.green + 'Ready' : C.red + 'Not Found'}${
+      C.reset
+    } | 🎥 FFmpeg : ${ffExists ? C.green + 'Ready' : C.red + 'Not Found'}${
       C.reset
     }`
   );
-  console.log(
-    ` 🎥 ffmpeg  : ${ffExists ? C.green + 'Ready' : C.red + 'Not Installed'}${
-      C.reset
-    }`
-  );
-  console.log(`\n${C.dim} Main Menu:${C.reset}`);
 
-  const menus = [
-    '📥 Download Media (Single/Playlist)',
-    '⚙️  Update yt-dlp',
-    '🔨 Instal FFmpeg (macOS Only)',
-    '❤️  Support Developer',
-    '🗑️  Cleanup (Hapus Tools)',
-    '🚪 Keluar',
-  ];
+  const safeStatus = safeMode
+    ? `${C.bgBlue}${C.white}  ACTIVE  ${C.reset}`
+    : `${C.bgRed}${C.white} DISABLED ${C.reset}`;
 
-  menus.forEach((m, i) => console.log(` ${C.cyan}${i + 1}.${C.reset} ${m}`));
+  console.log(` 🛡️  Safe Mode: ${safeStatus}`);
+  console.log(`\n${C.dim} Layanan Utama:${C.reset}`);
+  console.log(` ${C.cyan}1.${C.reset} 📥 Download Media (Video/Playlist)`);
+  console.log(` ${C.cyan}2.${C.reset} 🛡️  Toggle Safe Mode (ON/OFF)`);
+  console.log(`\n${C.dim} Pengaturan Engine:${C.reset}`);
+  console.log(` ${C.cyan}3.${C.reset} ⚙️  Update/Install yt-dlp`);
+  console.log(` ${C.cyan}4.${C.reset} 🔨 Install FFmpeg (macOS)`);
+  console.log(` ${C.cyan}5.${C.reset} 🗑️  Cleanup Tools`);
+  console.log(` ${C.cyan}6.${C.reset} 🚪 Keluar`);
 
-  console.log('');
-  const choice = await askQuestion('Pilih menu: ');
-
+  const choice = await askQuestion('\nPilih menu: ');
   switch (choice) {
     case '1':
       await startDownload();
       break;
     case '2':
-      await installYtdlp();
+      safeMode = !safeMode;
       mainMenu();
       break;
     case '3':
-      await installFfmpeg();
-      mainMenu();
+      await installYtdlp();
       break;
     case '4':
-      await showSupport();
+      await installFfmpeg();
       break;
     case '5':
-      const confirm = await askQuestion(
-        `${C.red}Hapus semua data tools? (y/n): ${C.reset}`
-      );
-      if (confirm.toLowerCase() === 'y') {
+      const conf = await askQuestion('Hapus semua file tools? (y/n): ');
+      if (conf.toLowerCase() === 'y')
         fs.rmSync(TOOLS_DIR, { recursive: true, force: true });
-        console.log(`${C.green}✅ Bersih!${C.reset}`);
-      }
       mainMenu();
       break;
     case '6':
-      console.log(`\n${C.yellow}Sampai jumpa!${C.reset}`);
       rl.close();
       process.exit(0);
-      break;
     default:
       mainMenu();
       break;
