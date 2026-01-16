@@ -1,64 +1,118 @@
-# Media-DL CLI 2026 🚀
+# 🚀 Media-DL Pro 2026
 
-**Media-DL CLI** adalah pengunduh media berbasis terminal generasi terbaru yang dirancang untuk kecepatan, kemudahan, dan kompatibilitas penuh. Ditenagai oleh `yt-dlp`, alat ini memastikan video yang Anda unduh selalu siap diputar di perangkat apa pun tanpa kendala codec.
+**The Ultimate Cross-Platform Media Engine Manager**
 
-## ✨ Fitur Unggulan
+Media-DL Pro adalah *cli-wrapper* canggih berbasis `yt-dlp` yang dirancang untuk pengguna profesional yang membutuhkan kecepatan, keteraturan, dan keamanan akun. Bukan sekadar pengunduh, ini adalah manajer media lokal yang cerdas.
 
-* 📥 **YouTube Playlist Power**: Deteksi otomatis playlist. Pilih video tertentu (misal: `1,3,5-10`) atau unduh semua sekaligus.
-* 🍏 **Apple Ecosystem Ready**: Secara otomatis mengonversi dan mengoptimalkan video ke format **H.264 (AVC1)** & **AAC** agar lancar diputar di **QuickTime Player**, iPhone, dan iPad.
-* 🛠️ **Smart Auto-Installer**: Tidak perlu pusing mengunduh `yt-dlp` atau `ffmpeg` secara manual. Skrip akan menyiapkannya untuk Anda (Optimal untuk macOS).
-* 📂 **Organized Storage**: Hasil unduhan tersimpan rapi di folder standar sistem `~/Downloads/media-dl/` yang dipisahkan berdasarkan kategori `video` dan `audio`.
-* 🛡️ **Fail-Safe Filename**: Fitur pemotongan judul otomatis untuk menghindari error *filename too long* pada sistem macOS/Windows.
+---
 
-## 📦 Instalasi
+## 🛡️ Mengapa Media-DL Pro?
 
-Cukup pastikan Anda memiliki [Node.js](https://nodejs.org/) terinstal, lalu jalankan:
+### 1. Safe Mode Guard™ (Exclusive)
+
+Jangan biarkan IP atau akun Anda terblokir. Media-DL dilengkapi dengan mode proteksi yang mensimulasikan perilaku manusia melalui:
+
+*
+
+**Smart Rate Limiting**: Membatasi kecepatan unduh hingga 5MB/s.
+
+*
+
+**Randomized Sleep**: Interval jeda otomatis 3-10 detik antar unduhan.
+
+*
+
+**Custom User-Agents**: Menggunakan identitas browser modern untuk menghindari deteksi bot.
+
+### 2. Dashboard Status Real-Time
+
+Pantau kesehatan sistem Anda secara langsung. Aplikasi mendeteksi secara otomatis ketersediaan `yt-dlp` dan `FFmpeg` untuk memastikan hasil unduhan maksimal.
+
+### 3. Pengunduhan Massal & Selektif
+
+Mendukung unduhan playlist secara penuh dengan fitur seleksi item yang presisi (Contoh: `1,3,5-10`).
+
+### 4. Optimalisasi Format Otomatis
+
+*
+
+**Video**: Konversi cerdas ke kontainer MP4 dengan codec `AVC1` agar kompatibel dengan perangkat seluler dan editor profesional.
+
+*
+
+**Audio**: Ekstraksi MP3 kualitas tinggi (320kbps) langsung ke folder musik Anda.
+
+---
+
+## 📦 Instalasi Cepat
 
 ```bash
+# Pastikan Node.js sudah terinstal
 npm install -g media-dl
 
 ```
 
-## 🚀 Cara Penggunaan
+Cukup ketik `media-dl` di terminal Anda untuk memulai.
 
-Jalankan perintah berikut di terminal Anda:
+---
 
-```bash
-media-dl
+## 🛠️ Navigasi Sistem
 
-```
+Aplikasi ini memiliki pusat kendali yang terorganisir:
 
-### Panduan Menu:
+1.
 
-1. **Download Media**: Masukkan link video atau playlist.
-2. **Pilih Format**: Video MP4 (QuickTime Compatible) atau Audio MP3.
-3. **Seleksi Playlist**: Masukkan angka video yang diinginkan (Contoh: `1,3-5`) atau tekan `Enter` untuk semua.
-4. **Auto-Open**: Folder tujuan akan otomatis terbuka setelah proses selesai.
+**📥 Main Service**: Layanan unduh media tunggal atau playlist.
 
-## 📁 Lokasi Penyimpanan
+1.
 
-Skrip ini menggunakan struktur folder yang rapi:
+**🛡️ Toggle Safe Mode**: Aktifkan/nonaktifkan perlindungan keamanan secara instan.
 
-* **Tools**: `~/.media-dl/` (Tersembunyi agar sistem tetap bersih).
-* **Video**: `~/Downloads/media-dl/video/`
-* **Audio**: `~/Downloads/media-dl/audio/`
+1.
 
-## 📋 Persyaratan Sistem
+**⚙️ Maintenance**: Perbarui engine otomatis atau bersihkan sistem dari file sampah.
 
-* **Node.js**: v14.0.0 atau lebih tinggi.
-* **FFmpeg**: Diperlukan untuk konversi tingkat lanjut. Gunakan **Menu 3** di dalam aplikasi untuk instalasi otomatis (macOS).
+1.
 
-## ❤️ Dukungan & Donasi
+**❤️ About**: Informasi pengembang dan daftar fitur lengkap.
 
-Skrip ini dikembangkan secara terbuka. Jika alat ini membantu produktivitas Anda, pertimbangkan untuk traktir pengembang:
+---
 
-* **Beli Kopi ☕**: [Donasi via Midtrans](https://app.midtrans.com/payment-links/coffee-developer)
-* **Beli Pizza 🍕**: [Donasi via Midtrans](https://app.midtrans.com/payment-links/pizza-developer)
+## 📂 Struktur Penyimpanan
+
+Media Anda akan tersimpan secara otomatis dengan struktur profesional di direktori pengguna:
+
+*
+
+**Video**: `~/Downloads/media-dl/video/`
+
+*
+
+**Audio**: `~/Downloads/media-dl/audio/`
+
+*
+
+**Playlist**: Akan dibuatkan sub-folder otomatis sesuai judul playlist agar tetap rapi.
+
+---
+
+## ❤️ Dukung Pengembangan
+
+Media-DL Pro dikembangkan oleh **Ariska Hidayat**  dan tersedia secara gratis. Dukungan Anda membantu kami terus memperbarui engine untuk mengatasi perubahan algoritma platform media.
+
+| Layanan | Link Donasi |
+| --- | --- |
+| **☕ Traktir Kopi** | <br>[Donasi via Midtrans](https://app.midtrans.com/coffee)
+
+ |
+| **🍕 Beli Pizza** | <br>[Donasi via Midtrans](https://app.midtrans.com/pizza)
+
+ |
 
 ---
 
 ## 📄 Lisensi
 
-Distribusi di bawah Lisensi MIT. Bebas digunakan dan dikembangkan kembali.
+Didistribusikan di bawah **Lisensi MIT**. Dibuat dengan ❤️ untuk komunitas open source.
 
 ---
