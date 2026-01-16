@@ -1,0 +1,23 @@
+# Dependency Node.js
+node_modules/
+package-lock.json
+npm-debug.log*
+
+# Folder Hasil Download Media
+downloads/
+
+# Tool Binaries (Jika Anda meletakkan exe/binary di folder project saat testing)
+*.exe
+yt-dlp
+ffmpeg
+ffprobe
+
+# OS Metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE Settings
+.vscode/
+.idea/
+*.swp

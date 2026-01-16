@@ -1,0 +1,17 @@
+{
+  "name": "media-dl",
+  "version": "1.0.0",
+  "description": "CLI Downloader video/audio lintas platform menggunakan 
+yt-dlp.",
+  "main": "bin/cli.js",
+  "bin": {
+    "media-dl": "./bin/cli.js"
+  },
+  "keywords": ["downloader", "youtube", "cross-platform", "media-dl"],
+  "author": "Ariska Hidayat",
+  "license": "MIT",
+  "dependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
