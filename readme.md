@@ -2,106 +2,102 @@
 
 **The Ultimate Cross-Platform Media Engine Manager**
 
-Media-DL Pro adalah *CLI wrapper* canggih berbasis `yt-dlp` yang dirancang untuk pengguna profesional yang membutuhkan kecepatan, keteraturan, dan keamanan akun. Bukan sekadar pengunduh, ini adalah manajer media lokal yang cerdas.
+Media-DL Pro adalah *CLI wrapper* canggih berbasis `yt-dlp` yang dirancang untuk kecepatan, keteraturan, dan keamanan. Bukan sekadar pengunduh, ini adalah manajer media lokal yang cerdas dengan sistem instalasi otomatis.
 
 ---
 
-## 🛡️ Mengapa Media-DL Pro?
+## ✨ Fitur Unggulan Baru
 
-### 1. Safe Mode Guard™ (Exclusive)
+### 1. ⚡ Direct Download & Menu Mode
 
-Jangan biarkan IP atau akun Anda terblokir. Media-DL dilengkapi dengan mode proteksi yang mensimulasikan perilaku manusia melalui:
+Sekarang kamu bisa memilih dua cara penggunaan:
 
-* **Smart Rate Limiting**
-  Membatasi kecepatan unduh hingga 5 MB/s.
+* **Interactive Mode**: Cukup ketik `media-dl` untuk masuk ke menu utama yang cantik.
+* **Fast Mode**: Ketik `media-dl <url>` untuk langsung masuk ke proses download tanpa basa-basi.
 
-* **Randomized Sleep**
-  Interval jeda otomatis 3–10 detik antar unduhan.
+### 2. 📱 Android (Termux) Ready
 
-* **Custom User-Agents**
-  Menggunakan identitas browser modern untuk menghindari deteksi bot.
+Dukungan penuh untuk pengguna mobile via Termux dengan script instalasi otomatis yang menyesuaikan lingkungan Linux Android.
 
----
+### 3. 🛡️ Safe Mode Guard™ (Updated)
 
-### 2. Dashboard Status Real-Time
+Menghindari deteksi bot dengan:
 
-Pantau kesehatan sistem Anda secara langsung. Aplikasi mendeteksi secara otomatis ketersediaan `yt-dlp` dan `FFmpeg` untuk memastikan hasil unduhan maksimal.
-
----
-
-### 3. Pengunduhan Massal & Selektif
-
-Mendukung unduhan playlist secara penuh dengan fitur seleksi item yang presisi
-(contoh: `1,3,5-10`).
+* **Rate Limiting**: Dibatasi hingga 5 MB/s.
+* **Smart Sleep**: Jeda acak 3–10 detik.
+* **Modern User-Agent**: Identitas browser terbaru agar tetap aman.
 
 ---
 
-### 4. Optimalisasi Format Otomatis
+## 🎞️ Platform yang Didukung
 
-* **Video**
-  Konversi cerdas ke kontainer MP4 dengan codec `AVC1` agar kompatibel dengan perangkat seluler dan editor profesional.
+Berkat engine `yt-dlp` yang selalu diperbarui, kamu bisa mengunduh dari:
 
-* **Audio**
-  Ekstraksi MP3 kualitas tinggi (320 kbps) langsung ke folder musik Anda.
+* **YouTube**: Video, Shorts, & Playlist.
+* **Social Media**: TikTok, Instagram Reels, Twitter (X).
+* **VOD Services**: Dan ratusan platform video lainnya.
 
 ---
 
-## 📦 Instalasi Cepat
+## 📦 Instalasi
+
+### Prasyarat
+
+* **Node.js**: Versi 14.0.0 atau lebih tinggi.
+
+### Cara Install
 
 ```bash
-# Pastikan Node.js sudah terinstal
 npm install -g media-dl
+
 ```
 
-Cukup ketik `media-dl` di terminal Anda untuk memulai.
+### Penggunaan
+
+```bash
+# Buka menu utama
+media-dl
+
+# Download langsung tanpa menu
+media-dl https://www.youtube.com/watch?v=example
+
+```
 
 ---
 
 ## 🛠️ Navigasi Sistem
 
-Aplikasi ini memiliki pusat kendali yang terorganisir:
+1. **📥 Download Media**: Mendukung pemilihan kualitas (Video/Audio MP3) dan seleksi playlist (misal: `1,3,5-10`).
+2. **🛡️ Toggle Safe Mode**: Aktifkan perlindungan tambahan secara *on-the-fly*.
+3. **⚙️ Maintenance**: Update otomatis `yt-dlp` dan `FFmpeg` langsung dari aplikasi tanpa perlu download manual.
+4. **🗑️ Reset System**: Hapus semua engine untuk instalasi ulang yang bersih.
 
-1. **📥 Main Service**
-   Layanan unduh media tunggal atau playlist.
+---
 
-2. **🛡️ Toggle Safe Mode**
-   Aktifkan atau nonaktifkan perlindungan keamanan secara instan.
+## 💻 Kompatibilitas Sistem
 
-3. **⚙️ Maintenance**
-   Perbarui engine otomatis atau bersihkan sistem dari file sampah.
-
-4. **❤️ About**
-   Informasi pengembang dan daftar fitur lengkap.
+| Sistem Operasi | Status | Cara Kerja |
+| --- | --- | --- |
+| **Windows** | ✅ Supported | Auto-download `.exe` ke folder `~/.media-dl` |
+| **macOS** | ✅ Supported | Auto-download via `curl` |
+| **Linux** | ✅ Supported | Integrasi via `apt` (Debian/Ubuntu) |
+| **Termux** | ✅ Supported | Integrasi via `pkg` & `pip` |
 
 ---
 
 ## 📂 Struktur Penyimpanan
 
-Media Anda akan tersimpan secara otomatis dengan struktur profesional di direktori pengguna:
+Unduhan kamu akan tersimpan rapi di:
 
-* **Video**
-  `~/Downloads/media-dl/video/`
-
-* **Audio**
-  `~/Downloads/media-dl/audio/`
-
-* **Playlist**
-  Sub-folder otomatis sesuai judul playlist agar tetap rapi.
+* **Video**: `~/Downloads/media-dl/video/`
+* **Audio**: `~/Downloads/media-dl/audio/`
+* **Playlist**: Sub-folder otomatis berdasarkan nama playlist.
 
 ---
 
-## ❤️ Dukung Pengembangan
+## ❤️ Dukungan
 
-Media-DL Pro dikembangkan oleh **Ariska Hidayat** dan tersedia secara gratis. Dukungan Anda membantu kami terus memperbarui engine untuk mengatasi perubahan algoritma platform media.
+Aplikasi ini dikembangkan oleh **Ariska Hidayat**. Jika bermanfaat, kamu bisa memberikan dukungan untuk biaya pemeliharaan server/engine:
 
-| Layanan            | Link Donasi                                            |
-| ------------------ | ------------------------------------------------------ |
-| **☕ Traktir Kopi** | [Donasi via Midtrans](https://app.midtrans.com/coffee) |
-| **🍕 Beli Pizza**  | [Donasi via Midtrans](https://app.midtrans.com/pizza)  |
-
----
-
-## 📄 Lisensi
-
-Didistribusikan di bawah **Lisensi MIT**.
-Dibuat dengan ❤️ untuk komunitas open source.
+* **☕ Traktir Kopi**: [Midtrans Coffee](https://app.midtrans.com/coffee)
+* **🍕 Beli Pizza**: [Midtrans Pizza](https://app.midtrans.com/pizza)
