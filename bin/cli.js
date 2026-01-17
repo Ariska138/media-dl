@@ -9,11 +9,14 @@ const { C, printHeader, renderProgressBar, askQuestion, rl } = require('./ui');
 // --- KONFIGURASI VISUAL (ANSI COLORS) ---
 
 const TOOLS_DIR = path.join(os.homedir(), '.media-dl');
+
 const isWindows = process.platform === 'win32';
 const isMac = process.platform === 'darwin';
+const isTermux =
+  process.env.PREFIX && process.env.PREFIX.includes('com.termux');
 
-const YTDLP_PATH = path.join(TOOLS_DIR, isWindows ? 'yt-dlp.exe' : 'yt-dlp');
-const FFMPEG_PATH = path.join(TOOLS_DIR, isWindows ? 'ffmpeg.exe' : 'ffmpeg');
+let YTDLP_PATH = path.join(TOOLS_DIR, isWindows ? 'yt-dlp.exe' : 'yt-dlp');
+let FFMPEG_PATH = path.join(TOOLS_DIR, isWindows ? 'ffmpeg.exe' : 'ffmpeg');
 
 // State Aplikasi
 let safeMode = true;
@@ -21,26 +24,36 @@ let safeMode = true;
 if (!fs.existsSync(TOOLS_DIR)) fs.mkdirSync(TOOLS_DIR, { recursive: true });
 
 function checkTools() {
-  // Cek file lokal di folder .media-dl
   let ytExists = fs.existsSync(YTDLP_PATH);
   let ffExists = fs.existsSync(FFMPEG_PATH);
 
-  // Jika tidak ada di lokal, cek apakah tersedia di global system (Linux/Termux)
+  // Cek Global yt-dlp
   if (!ytExists) {
     try {
-      execSync(isWindows ? 'where yt-dlp' : 'which yt-dlp', {
-        stdio: 'ignore',
-      });
-      ytExists = true;
+      const cmd = isWindows ? 'where yt-dlp' : 'which yt-dlp';
+      const pathFound = execSync(cmd, { stdio: ['ignore', 'pipe', 'ignore'] })
+        .toString()
+        .trim()
+        .split('\n')[0];
+      if (pathFound) {
+        YTDLP_PATH = pathFound; // UPDATE PATH KE GLOBAL
+        ytExists = true;
+      }
     } catch (e) {}
   }
 
+  // Cek Global ffmpeg
   if (!ffExists) {
     try {
-      execSync(isWindows ? 'where ffmpeg' : 'which ffmpeg', {
-        stdio: 'ignore',
-      });
-      ffExists = true;
+      const cmd = isWindows ? 'where ffmpeg' : 'which ffmpeg';
+      const globalPath = execSync(cmd, { stdio: ['ignore', 'pipe', 'ignore'] })
+        .toString()
+        .trim()
+        .split('\n')[0];
+      if (globalPath) {
+        FFMPEG_PATH = globalPath; // UPDATE PATH KE GLOBAL
+        ffExists = true;
+      }
     } catch (e) {}
   }
 
@@ -56,10 +69,6 @@ async function installYtdlp() {
   const url = isWindows
     ? 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe'
     : 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp';
-
-  // Deteksi Termux
-  const isTermux =
-    process.env.PREFIX && process.env.PREFIX.includes('com.termux');
 
   try {
     if (isTermux) {
@@ -97,9 +106,6 @@ async function installFfmpeg() {
   console.log(
     `${C.dim}FFmpeg diperlukan untuk kualitas 1080p+ dan konversi MP3.${C.reset}\n`,
   );
-
-  const isTermux =
-    process.env.PREFIX && process.env.PREFIX.includes('com.termux');
 
   try {
     if (isTermux) {
@@ -239,8 +245,12 @@ async function startDownload(videoURLFromArgs = null) {
 
   try {
     const rawInfo = execSync(
-      `"${YTDLP_PATH}" --flat-playlist --print "%(playlist_title)s|%(title)s" "${videoURL}"`,
-      { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] },
+      `"${YTDLP_PATH}" --flat-playlist --no-warnings --print "%(playlist_title)s|%(title)s" "${videoURL}"`,
+      {
+        encoding: 'utf-8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+        timeout: 20000,
+      },
     );
     const lines = rawInfo.trim().split('\n');
     if (lines.length > 1 || videoURL.includes('playlist?list=')) {
@@ -248,7 +258,22 @@ async function startDownload(videoURLFromArgs = null) {
       playlistInfo.title = lines[0].split('|')[0] || 'Unduhan Playlist';
       playlistInfo.items = lines.map((l) => l.split('|')[1]).filter(Boolean);
     }
-  } catch (e) {}
+  } catch (e) {
+    console.log(`\n${C.red}❌ Gagal menganalisa tautan.${C.reset}`);
+
+    if (e.message.includes('ETIMEDOUT')) {
+      console.log(
+        `${C.yellow}⚠️  Waktu analisa habis. Periksa koneksi internet Anda.${C.reset}`,
+      );
+    } else {
+      console.log(
+        `${C.yellow}⚠️  Pastikan link valid atau tidak diprivat/dihapus.${C.reset}`,
+      );
+    }
+
+    await askQuestion('\nTekan Enter untuk kembali ke menu...');
+    return mainMenu(); // Keluar dari fungsi dan balik ke menu utama
+  }
 
   let playlistSelection = null;
   if (playlistInfo.isPlaylist) {
@@ -529,14 +554,6 @@ async function cleanUp() {
   const conf = await askQuestion('Hapus semua file tools? (y/n): ');
   if (conf.toLowerCase() === 'y')
     fs.rmSync(TOOLS_DIR, { recursive: true, force: true });
-}
-
-function checkTools() {
-  return {
-    ytExists: fs.existsSync(YTDLP_PATH),
-    ffExists: fs.existsSync(FFMPEG_PATH),
-    allReady: fs.existsSync(YTDLP_PATH) && fs.existsSync(FFMPEG_PATH),
-  };
 }
 
 async function firstTimeSetup() {
