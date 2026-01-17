@@ -21,10 +21,30 @@ let safeMode = true;
 if (!fs.existsSync(TOOLS_DIR)) fs.mkdirSync(TOOLS_DIR, { recursive: true });
 
 function checkTools() {
-  return {
-    ytExists: fs.existsSync(YTDLP_PATH),
-    ffExists: fs.existsSync(FFMPEG_PATH),
-  };
+  // Cek file lokal di folder .media-dl
+  let ytExists = fs.existsSync(YTDLP_PATH);
+  let ffExists = fs.existsSync(FFMPEG_PATH);
+
+  // Jika tidak ada di lokal, cek apakah tersedia di global system (Linux/Termux)
+  if (!ytExists) {
+    try {
+      execSync(isWindows ? 'where yt-dlp' : 'which yt-dlp', {
+        stdio: 'ignore',
+      });
+      ytExists = true;
+    } catch (e) {}
+  }
+
+  if (!ffExists) {
+    try {
+      execSync(isWindows ? 'where ffmpeg' : 'which ffmpeg', {
+        stdio: 'ignore',
+      });
+      ffExists = true;
+    } catch (e) {}
+  }
+
+  return { ytExists, ffExists, allReady: ytExists && ffExists };
 }
 
 // --- INSTALLERS ---
@@ -36,17 +56,35 @@ async function installYtdlp() {
   const url = isWindows
     ? 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe'
     : 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp';
+
+  // Deteksi Termux
+  const isTermux =
+    process.env.PREFIX && process.env.PREFIX.includes('com.termux');
+
   try {
-    if (isWindows) {
+    if (isTermux) {
+      // Di Termux, lebih disarankan menggunakan python/pip untuk stabilitas
+      console.log(`${C.dim}Menginstall yt-dlp via python...${C.reset}`);
+      execSync('pkg update && pkg install python ffmpeg -y', {
+        stdio: 'inherit',
+      });
+      execSync('pip install -U "yt-dlp[default]"', { stdio: 'inherit' });
+      console.log(
+        `\n${C.green}✅ yt-dlp berhasil diinstal di Termux!${C.reset}`,
+      );
+    } else if (isWindows) {
       execSync(
         `powershell -Command "Invoke-WebRequest -Uri ${url} -OutFile '${YTDLP_PATH}'"`,
         { stdio: 'inherit' },
       );
     } else {
+      // Linux (Ubuntu) & macOS
       execSync(`curl -L -# "${url}" -o "${YTDLP_PATH}"`, { stdio: 'inherit' });
       execSync(`chmod a+rx "${YTDLP_PATH}"`);
     }
-    console.log(`\n${C.green}✅ yt-dlp berhasil dikonfigurasi!${C.reset}`);
+    if (!isTermux) {
+      console.log(`\n${C.green}✅ yt-dlp berhasil dikonfigurasi!${C.reset}`);
+    }
   } catch (e) {
     console.error(
       `\n${C.red}❌ Gagal mengunduh. Periksa koneksi internet Anda.${C.reset}`,
@@ -60,8 +98,19 @@ async function installFfmpeg() {
     `${C.dim}FFmpeg diperlukan untuk kualitas 1080p+ dan konversi MP3.${C.reset}\n`,
   );
 
+  const isTermux =
+    process.env.PREFIX && process.env.PREFIX.includes('com.termux');
+
   try {
-    if (isMac) {
+    if (isTermux) {
+      console.log(
+        `${C.blue}⏳ Mendeteksi Termux: Menginstall via pkg...${C.reset}`,
+      );
+      execSync('pkg update && pkg install ffmpeg -y', { stdio: 'inherit' });
+      console.log(
+        `\n${C.green}✅ FFmpeg berhasil diinstal di Termux!${C.reset}`,
+      );
+    } else if (isMac) {
       // ... (Kode macOS Anda sudah benar)
       console.log(`${C.blue}⏳ Mengunduh FFmpeg untuk macOS...${C.reset}`);
       const zipPath = path.join(TOOLS_DIR, 'ffmpeg.zip');
@@ -103,6 +152,18 @@ async function installFfmpeg() {
 
       console.log(
         `\n${C.green}✅ FFmpeg berhasil diinstal di Windows!${C.reset}`,
+      );
+    } else {
+      // Asumsi Linux (Ubuntu/Debian)
+      console.log(
+        `${C.blue}⏳ Mendeteksi Linux: Menginstall via apt...${C.reset}`,
+      );
+      console.log(`${C.dim}Mungkin memerlukan password sudo.${C.reset}`);
+      execSync('sudo apt update && sudo apt install ffmpeg -y', {
+        stdio: 'inherit',
+      });
+      console.log(
+        `\n${C.green}✅ FFmpeg berhasil diinstal di Linux!${C.reset}`,
       );
     }
   } catch (e) {
