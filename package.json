@@ -3,29 +3,41 @@
   "version": "2.3.0",
   "description": "CLI Downloader video/audio lintas platform menggunakan yt-dlp.",
   "main": "bin/cli.js",
+  "bin": {
+    "media-dl": "bin/cli.js"
+  },
   "scripts": {
     "dev": "npm un -g media-dl && npm i -g . && media-dl",
-    "start": "npm un -g media-dl && npm i -g media-dl@latest && media-dl",
+    "prod": "npm un -g media-dl && npm i -g media-dl@latest && media-dl",
+    "start": "node bin/cli.js",
     "release": "npm version patch && npm publish",
     "release:minor": "npm version minor && npm publish",
     "release:major": "npm version major && npm publish"
   },
-  "bin": {
-    "media-dl": "bin/cli.js"
-  },
-  "publishConfig": {
-    "access": "public"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ariska138/media-dl.git"
   },
   "keywords": [
     "downloader",
-    "youtube",
+    "video-downloader",
+    "youtube-dl",
+    "yt-dlp",
+    "cli",
     "cross-platform",
     "media-dl"
   ],
   "author": "Ariska Hidayat",
   "license": "MIT",
-  "dependencies": {},
+  "bugs": {
+    "url": "https://github.com/Ariska138/media-dl/issues"
+  },
+  "homepage": "https://github.com/Ariska138/media-dl#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=14.0.0"
   }
 }
+
