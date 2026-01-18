@@ -217,6 +217,28 @@ function runSpawn(command, args) {
   });
 }
 
+async function getEstimate(url, format) {
+  try {
+    const sizeStr = execSync(
+      `"${YTDLP_PATH}" --print "%(filesize_approx,filesize)s" -f "${format}" --no-warnings "${url}"`,
+      {
+        encoding: 'utf-8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+        timeout: 10000,
+      },
+    ).trim();
+
+    if (sizeStr && sizeStr !== 'NA') {
+      const bytes = parseInt(sizeStr);
+      if (isNaN(bytes)) return 'N/A';
+      if (bytes > 1024 * 1024 * 1024)
+        return (bytes / 1024 ** 3).toFixed(2) + ' GB';
+      return (bytes / 1024 ** 2).toFixed(2) + ' MB';
+    }
+  } catch (e) {}
+  return 'Estimasi tidak tersedia';
+}
+
 // --- DOWNLOAD ENGINE ---
 async function startDownload(videoURLFromArgs = null) {
   let { ytExists, ffExists } = checkTools();
@@ -260,7 +282,6 @@ async function startDownload(videoURLFromArgs = null) {
     }
   } catch (e) {
     console.log(`\n${C.red}❌ Gagal menganalisa tautan.${C.reset}`);
-
     if (e.message.includes('ETIMEDOUT')) {
       console.log(
         `${C.yellow}⚠️  Waktu analisa habis. Periksa koneksi internet Anda.${C.reset}`,
@@ -270,13 +291,14 @@ async function startDownload(videoURLFromArgs = null) {
         `${C.yellow}⚠️  Pastikan link valid atau tidak diprivat/dihapus.${C.reset}`,
       );
     }
-
     await askQuestion('\nTekan Enter untuk kembali ke menu...');
-    return mainMenu(); // Keluar dari fungsi dan balik ke menu utama
+    return mainMenu();
   }
 
+  // --- PEMILIHAN PLAYLIST (Tetap Sama) ---
   let playlistSelection = null;
   if (playlistInfo.isPlaylist) {
+    // ... (Logika tampilan playlist sama seperti sebelumnya)
     console.log(
       `\n${C.bgBlue}${C.bright} 📂 PLAYLIST TERDETEKSI: ${playlistInfo.title} ${C.reset}`,
     );
@@ -288,10 +310,9 @@ async function startDownload(videoURLFromArgs = null) {
     console.log(
       `\n${C.dim}Contoh pilih nomor: 1,3,5-10 atau biarkan kosong untuk semua.${C.reset}`,
     );
-    const selectionInput = await askQuestion('Pilih nomor: ');
-
-    // Parsing nomor playlist
+    const selectionInput = await askQuestion('\nPilih nomor: ');
     if (selectionInput) {
+      // ... (Logika parsing nomor playlist)
       const selected = new Set();
       selectionInput.split(',').forEach((p) => {
         if (p.includes('-')) {
@@ -307,14 +328,41 @@ async function startDownload(videoURLFromArgs = null) {
     }
   }
 
+  // --- MENU FORMAT UTAMA ---
   console.log(`\n${C.bright} [ PILIH FORMAT ]${C.reset}`);
-  console.log(` ${C.green}1.${C.reset} Video (Kualitas Terbaik/MP4)`);
-  console.log(
-    ` ${C.green}2.${C.reset} Audio Only (MP3) ${
-      ffExists ? C.green + '✅' : C.red + '❌ (Butuh FFmpeg)'
-    }`,
-  );
+  console.log(` ${C.green}1.${C.reset} Video (MP4)`);
+  console.log(` ${C.green}2.${C.reset} Audio Only (MP3)`);
   const mode = await askQuestion('Pilihan: ');
+
+  // --- LOGIKA RESOLUSI OPTIMAL ---
+  let formatArg = '';
+  if (mode === '1') {
+    console.log(`\n${C.bright} [ PILIH RESOLUSI ]${C.reset}`);
+    console.log(` ${C.cyan}1.${C.reset} Best Quality (Up to 4K)`);
+    console.log(` ${C.cyan}2.${C.reset} Tablet Optimal (720p)`);
+    console.log(` ${C.cyan}3.${C.reset} Mobile Optimal (480p)`);
+    const resChoice = await askQuestion('Pilihan Resolusi (1-3): ');
+
+    if (resChoice === '2') {
+      formatArg =
+        'bestvideo[height<=720][vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[height<=720]';
+    } else if (resChoice === '3') {
+      formatArg =
+        'bestvideo[height<=480][vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[height<=480]';
+    } else {
+      formatArg =
+        'bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[vcodec^=avc1]/best';
+    }
+  }
+  // --- TAMPILKAN ESTIMASI ---
+  if (!playlistInfo.isPlaylist && mode === '1') {
+    console.log(`${C.dim}⏳ Menghitung estimasi ukuran file...${C.reset}`);
+    const size = await getEstimate(videoURL, formatArg);
+    console.log(`${C.yellow}📊 Estimasi Ukuran: ${C.bright}${size}${C.reset}`);
+
+    const confirm = await askQuestion('Lanjutkan unduhan? (Y/n): ');
+    if (confirm.toLowerCase() === 'n') return mainMenu();
+  }
 
   const baseDir = path.join(os.homedir(), 'Downloads', 'media-dl');
   const subFolder = mode === '2' ? 'audio' : 'video';
@@ -334,7 +382,7 @@ async function startDownload(videoURLFromArgs = null) {
     videoURL,
   ];
 
-  // Integrasi Safe Mode
+  // Integrasi Safe Mode (cite: cli.js)
   if (safeMode) {
     args.push(
       '--rate-limit',
@@ -356,27 +404,20 @@ async function startDownload(videoURLFromArgs = null) {
       console.log(
         `${C.red}❌ Error: Anda wajib menginstal FFmpeg untuk mengunduh audio.${C.reset}`,
       );
-      await askQuestion('Tekan Enter untuk kembali ke Menu Utama...');
-      mainMenu();
+      return mainMenu();
     }
     args.unshift('-x', '--audio-format', 'mp3');
   } else {
-    args.unshift(
-      '-f',
-      'bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[vcodec^=avc1]/best',
-    );
+    args.unshift('-f', formatArg);
     if (ffExists) args.unshift('--recode-video', 'mp4');
   }
 
   args.push('--no-mtime');
-
   console.log(`\n${C.bgBlue}${C.bright} 🚀 MEMULAI PROSES... ${C.reset}\n`);
 
-  const code = await runSpawn(YTDLP_PATH, args); // Menunggu sampai benar-benar selesai
-
+  const code = await runSpawn(YTDLP_PATH, args);
   if (code === 0) {
     console.log(`\n${C.green}✨ SELESAI! Cek folder: ${outputDir}${C.reset}`);
-    // Auto-open folder
     try {
       execSync(
         isWindows
