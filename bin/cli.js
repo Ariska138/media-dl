@@ -24,11 +24,22 @@ let safeMode = true;
 if (!fs.existsSync(TOOLS_DIR)) fs.mkdirSync(TOOLS_DIR, { recursive: true });
 
 function checkTools() {
-  let ytExists = fs.existsSync(YTDLP_PATH);
-  let ffExists = fs.existsSync(FFMPEG_PATH);
+  // Cek jalur default lokal (internal)
+  const LOCAL_YT = path.join(TOOLS_DIR, isWindows ? 'yt-dlp.exe' : 'yt-dlp');
+  const LOCAL_FF = path.join(TOOLS_DIR, isWindows ? 'ffmpeg.exe' : 'ffmpeg');
 
-  // Cek Global yt-dlp
-  if (!ytExists) {
+  const isLocalYt = fs.existsSync(LOCAL_YT);
+  const isLocalFf = fs.existsSync(LOCAL_FF);
+
+  let ytExists = isLocalYt;
+  let ffExists = isLocalFf;
+
+  // Reset path ke default sebelum pengecekan global
+  if (isLocalYt) YTDLP_PATH = LOCAL_YT;
+  if (isLocalFf) FFMPEG_PATH = LOCAL_FF;
+
+  // Cek Global yt-dlp hanya jika lokal tidak ada
+  if (!isLocalYt) {
     try {
       const cmd = isWindows ? 'where yt-dlp' : 'which yt-dlp';
       const pathFound = execSync(cmd, { stdio: ['ignore', 'pipe', 'ignore'] })
@@ -36,14 +47,16 @@ function checkTools() {
         .trim()
         .split('\n')[0];
       if (pathFound) {
-        YTDLP_PATH = pathFound; // UPDATE PATH KE GLOBAL
+        YTDLP_PATH = pathFound;
         ytExists = true;
       }
-    } catch (e) {}
+    } catch (e) {
+      YTDLP_PATH = LOCAL_YT; // Kembalikan ke path lokal jika global pun tidak ada
+    }
   }
 
-  // Cek Global ffmpeg
-  if (!ffExists) {
+  // Cek Global ffmpeg hanya jika lokal tidak ada
+  if (!isLocalFf) {
     try {
       const cmd = isWindows ? 'where ffmpeg' : 'which ffmpeg';
       const globalPath = execSync(cmd, { stdio: ['ignore', 'pipe', 'ignore'] })
@@ -51,13 +64,21 @@ function checkTools() {
         .trim()
         .split('\n')[0];
       if (globalPath) {
-        FFMPEG_PATH = globalPath; // UPDATE PATH KE GLOBAL
+        FFMPEG_PATH = globalPath;
         ffExists = true;
       }
-    } catch (e) {}
+    } catch (e) {
+      FFMPEG_PATH = LOCAL_FF; // Kembalikan ke path lokal jika global pun tidak ada
+    }
   }
 
-  return { ytExists, ffExists, allReady: ytExists && ffExists };
+  return {
+    ytExists,
+    ffExists,
+    isLocalYt,
+    isLocalFf,
+    allReady: ytExists && ffExists,
+  };
 }
 
 // --- INSTALLERS ---
@@ -501,24 +522,31 @@ async function showSupport() {
 }
 
 async function mainMenu() {
-  const { ytExists, ffExists } = checkTools();
+  const status = checkTools();
+  const { ytExists, ffExists } = status;
 
   // Menggunakan 2 parameter: Judul dan Summary status singkat
   printHeader('MEDIA-DL PRO 2026', 'Pusat Kendali Unduhan Media Lokal');
 
   // --- SEKSI DASHBOARD (INFO SISTEM) ---
-  const statusYt = ytExists
-    ? `${C.green}Ready${C.reset}`
-    : `${C.red}Not Found${C.reset}`;
-  const statusFf = ffExists
-    ? `${C.green}Ready${C.reset}`
-    : `${C.yellow}Missing${C.reset}`;
+  const ytLabel = status.isLocalYt
+    ? `${C.green}Ready (Internal)${C.reset}`
+    : status.ytExists
+      ? `${C.cyan}Ready (System)${C.reset}`
+      : `${C.red}Not Found${C.reset}`;
+
+  const ffLabel = status.isLocalFf
+    ? `${C.green}Ready (Internal)${C.reset}`
+    : status.ffExists
+      ? `${C.cyan}Ready (System)${C.reset}`
+      : `${C.yellow}Missing${C.reset}`;
+
   const safeBadge = safeMode
     ? `${C.bgBlue}${C.white}  ON  ${C.reset}`
     : `${C.bgRed}${C.white} OFF ${C.reset}`;
 
   console.log(` ${C.bright}SYSTEM STATUS${C.reset}`);
-  console.log(` 🤖 Engine : [ ${statusYt} ]  |  🎬 FFmpeg : [ ${statusFf} ]`);
+  console.log(` 🤖 Engine : [ ${ytLabel} ]  |  🎬 FFmpeg : [ ${ffLabel} ]`);
   console.log(` 🛡️  Safe Mode Guard : ${safeBadge}\n`);
 
   console.log(` ${C.cyan}━${'━'.repeat(48)}${C.reset}`);
@@ -592,9 +620,13 @@ async function mainMenu() {
 }
 
 async function cleanUp() {
-  const conf = await askQuestion('Hapus semua file tools? (y/n): ');
-  if (conf.toLowerCase() === 'y')
+  if (fs.existsSync(TOOLS_DIR)) {
     fs.rmSync(TOOLS_DIR, { recursive: true, force: true });
+  }
+
+  // RESET PATH ke default lokal agar checkTools tidak "tersesat" menggunakan path lama
+  YTDLP_PATH = path.join(TOOLS_DIR, isWindows ? 'yt-dlp.exe' : 'yt-dlp');
+  FFMPEG_PATH = path.join(TOOLS_DIR, isWindows ? 'ffmpeg.exe' : 'ffmpeg');
 }
 
 async function firstTimeSetup() {
@@ -686,9 +718,17 @@ async function systemMaintenance() {
         );
         if (confirm.toLowerCase() === 'y') {
           await cleanUp(); // Panggil fungsi penghapusan folder
-          console.log(
-            `${C.yellow}Sistem dibersihkan. Anda akan diarahkan ke Setup Wizard.${C.reset}`,
-          );
+          console.log(`${C.yellow}Folder .media-dl telah dihapus.${C.reset}`);
+
+          // Cek ulang status setelah hapus
+          const finalCheck = checkTools();
+          if (finalCheck.isLocalYt || finalCheck.isLocalFf) {
+            console.log(
+              `${C.red}Gagal menghapus beberapa file. Pastikan tidak ada proses yang mengunci file.${C.reset}`,
+            );
+          } else {
+            console.log(`${C.green}Reset lokal berhasil.${C.reset}`);
+          }
           await askQuestion('Tekan Enter...');
           return bootstrap(); // Kembali ke pengecekan awal
         }
