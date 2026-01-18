@@ -1,6 +1,6 @@
 {
   "name": "media-dl",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description": "CLI Downloader video/audio lintas platform menggunakan yt-dlp.",
   "main": "bin/cli.js",
   "bin": {
