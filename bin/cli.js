@@ -267,8 +267,7 @@ async function startDownload(videoURLFromArgs = null) {
     console.log(
       `\n${C.red}❌ Engine yt-dlp tidak ditemukan. Silakan pilih menu Update/Install.${C.reset}`,
     );
-    await askQuestion('Tekan Enter...');
-    return mainMenu();
+    await backToMenu();
   }
 
   if (!ffExists) {
@@ -312,8 +311,7 @@ async function startDownload(videoURLFromArgs = null) {
         `${C.yellow}⚠️  Pastikan link valid atau tidak diprivat/dihapus.${C.reset}`,
       );
     }
-    await askQuestion('\nTekan Enter untuk kembali ke menu...');
-    return mainMenu();
+    await backToMenu();
   }
 
   // --- PEMILIHAN PLAYLIST (Tetap Sama) ---
@@ -451,8 +449,23 @@ async function startDownload(videoURLFromArgs = null) {
   } else {
     console.log(`\n${C.red}❌ Terjadi kesalahan saat mengunduh.${C.reset}`);
   }
-  await askQuestion('Tekan Enter untuk kembali ke Menu Utama...');
-  mainMenu();
+  await backToMenu();
+}
+
+async function backToMenu() {
+  try {
+    await askQuestion('Tekan Enter untuk kembali ke Menu Utama...');
+    mainMenu(); // Kembali ke menu
+  } catch (err) {
+    // Tangani jika readline sudah tertutup (Ctrl+C ditekan sebelumnya)
+    if (err.code === 'ERR_USE_AFTER_CLOSE') {
+      console.log(`\n${C.dim}Program dihentikan oleh pengguna.${C.reset}`);
+      process.exit(0);
+    } else {
+      // Jika error lain, lempar kembali agar bisa dideteksi (opsional)
+      throw err;
+    }
+  }
 }
 
 async function showSupport() {
@@ -517,8 +530,7 @@ async function showSupport() {
 
   console.log(`\n${C.cyan}${'━'.repeat(52)}${C.reset}`);
 
-  await askQuestion('Tekan Enter untuk kembali ke Menu Utama...');
-  mainMenu();
+  await backToMenu();
 }
 
 async function mainMenu() {
