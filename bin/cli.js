@@ -363,10 +363,10 @@ async function startDownload(videoURLFromArgs = null) {
 
     if (resChoice === '2') {
       formatArg =
-        'bestvideo[height<=720][vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[height<=720]';
+        'bestvideo[height<=720][vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[height<=720]/best';
     } else if (resChoice === '3') {
       formatArg =
-        'bestvideo[height<=480][vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[height<=480]';
+        'bestvideo[height<=480][vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[height<=480]/best';
     } else {
       formatArg =
         'bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[vcodec^=avc1]/best';
@@ -784,3 +784,4 @@ async function bootstrap() {
 }
 
 bootstrap();
+
